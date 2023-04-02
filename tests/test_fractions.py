@@ -58,7 +58,7 @@ def equality_assertion(request):
 
 
 def assert_reduced(to_reduce, expected):
-    return astuple(to_reduce.reduced()) == astuple(expected)
+    assert astuple(to_reduce.reduced()) == astuple(expected)
 
 
 class TestFractionReduced:
@@ -79,3 +79,12 @@ class TestFractionReduced:
 
     def test_double_negative(self):
         assert_reduced(Fraction(-2, -11), Fraction(2, 11))
+
+    def test_simple_division(self):
+        assert_reduced(Fraction(4, 16), Fraction(1, 4))
+
+    def test_simple_division_negative(self):
+        assert_reduced(Fraction(4, -16), Fraction(-1, 4))
+
+    def test_simple_division_negative_numerator(self):
+        assert_reduced(Fraction(-25, 125), Fraction(-1, 5))

@@ -9,6 +9,14 @@ class Fraction:
     def reduced(self) -> "Fraction":
         if self.numerator == 0:
             return Fraction(0, 1)
-        if self.denominator < 0:
-            return Fraction(-self.numerator, -self.denominator)
-        return self
+
+        numerator = self.numerator
+        denominator = self.denominator
+        factor, remainder = divmod(denominator, numerator)
+        if remainder == 0:
+            numerator = 1
+            denominator = factor
+        if denominator < 0:
+            numerator = -numerator
+            denominator = -denominator
+        return Fraction(numerator, denominator)
