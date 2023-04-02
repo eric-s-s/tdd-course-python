@@ -21,3 +21,6 @@ class Fraction:
         numerator //= factor
         denominator //= factor
         return Fraction(numerator, denominator)
+
+    def __eq__(self, other):
+        return astuple(self.reduced()) == astuple(other.reduced())

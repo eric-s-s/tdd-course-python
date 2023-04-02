@@ -84,3 +84,14 @@ class TestFractionReduced:
 
     def test_greatest_common_denominator_negative_denominator(self):
         assert_reduced(Fraction(49, -35), Fraction(-7, 5))
+
+
+class TestFractionsEquality:
+    def test_zero(self):
+        assert Fraction(0, -2) == Fraction(-0, 25) == Fraction(0, 1)
+
+    def test_greatest_common_denominator(self):
+        assert Fraction(2, 3) == Fraction(-10, -15) == Fraction(6, 9)
+
+    def test_inequality(self):
+        assert Fraction(1, 2) != Fraction(-1, 2)
