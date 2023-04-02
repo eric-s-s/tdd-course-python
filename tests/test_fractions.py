@@ -95,3 +95,30 @@ class TestFractionsEquality:
 
     def test_inequality(self):
         assert Fraction(1, 2) != Fraction(-1, 2)
+
+
+class TestFractionsHash:
+    def test_zero(self):
+        assert hash(Fraction(0, -2)) == hash(Fraction(-0, 25)) == hash(Fraction(0, 1))
+
+    def test_greatest_common_denominator(self):
+        assert hash(Fraction(2, 3)) == hash(Fraction(-10, -15)) == hash(Fraction(6, 9))
+
+    def test_inequality(self):
+        assert hash(Fraction(1, 2)) != hash(Fraction(-1, 2))
+
+
+def assert_exact_match(fraction, numerator, denominator):
+    assert fraction.numerator == numerator
+    assert fraction.denominator == denominator
+
+
+class TestAdd:
+    def test_add_zeros(self):
+        actual = Fraction(0, 2) + Fraction(0, 3)
+        assert_exact_match(actual, 0, 1)
+
+    @pytest.mark.parametrize("fraction", [Fraction(1, 2), Fraction(-3, 2)])
+    def test_add_zero_no_change(self, fraction):
+        assert Fraction(0, 1) + fraction == fraction
+        assert fraction + Fraction(0, 1) == fraction

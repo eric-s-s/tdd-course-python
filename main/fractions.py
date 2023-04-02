@@ -24,3 +24,14 @@ class Fraction:
 
     def __eq__(self, other):
         return astuple(self.reduced()) == astuple(other.reduced())
+
+    def __hash__(self):
+        return hash(astuple(self.reduced()))
+
+    def __add__(self, other):
+        zero_fraction = Fraction(0, 1)
+        if self == other == zero_fraction:
+            return zero_fraction
+        if self == zero_fraction:
+            return other
+        return self
