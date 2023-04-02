@@ -44,19 +44,6 @@ multiples denom
 """
 
 
-def assert_equals(a, b):
-    assert a == b, (a.reduced(), b.reduced())
-
-
-def assert_hash_equal(a, b):
-    assert hash(a) == hash(b), (a.reduced(), b.reduced())
-
-
-@pytest.fixture(params=[assert_equals, assert_hash_equal], ids=["eq", "hash"])
-def equality_assertion(request):
-    yield request.param
-
-
 def assert_reduced(to_reduce, expected):
     assert astuple(to_reduce.reduced()) == astuple(expected)
 
@@ -88,3 +75,12 @@ class TestFractionReduced:
 
     def test_simple_division_negative_numerator(self):
         assert_reduced(Fraction(-25, 125), Fraction(-1, 5))
+
+    def test_greatest_common_denominator(self):
+        assert_reduced(Fraction(15, 40), Fraction(3, 8))
+
+    def test_greatest_common_denominator_negative_numerator(self):
+        assert_reduced(Fraction(-12, 9), Fraction(-4, 3))
+
+    def test_greatest_common_denominator_negative_denominator(self):
+        assert_reduced(Fraction(49, -35), Fraction(-7, 5))

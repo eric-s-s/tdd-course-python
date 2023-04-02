@@ -1,4 +1,5 @@
 from dataclasses import dataclass, astuple
+from math import gcd
 
 
 @dataclass(frozen=True)
@@ -12,11 +13,11 @@ class Fraction:
 
         numerator = self.numerator
         denominator = self.denominator
-        factor, remainder = divmod(denominator, numerator)
-        if remainder == 0:
-            numerator = 1
-            denominator = factor
         if denominator < 0:
             numerator = -numerator
             denominator = -denominator
+
+        factor = gcd(numerator, denominator)
+        numerator //= factor
+        denominator //= factor
         return Fraction(numerator, denominator)
