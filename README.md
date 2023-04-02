@@ -1,2 +1,6 @@
 # tdd-course-python
-all-purpose python repo for tdd course
+
+added tcr command.  when pytest is working, do
+
+`./tcr.sh some commit message`
+

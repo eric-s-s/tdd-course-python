@@ -17,5 +17,7 @@ class Fraction:
 
     def __add__(self, other: "Fraction") -> "Fraction":
         new_dominator = self.denominator * other.denominator
-        new_numerator = self.numerator * other.denominator + other.numerator * self.denominator
+        new_numerator = (
+            self.numerator * other.denominator + other.numerator * self.denominator
+        )
         return Fraction(new_numerator, new_dominator)
