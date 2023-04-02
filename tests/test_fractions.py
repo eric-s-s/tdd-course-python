@@ -1,3 +1,5 @@
+import pytest
+
 from main.fractions import Fraction
 
 # TODO write notes and then make better tests
@@ -40,6 +42,22 @@ multiples denom
 """
 
 
+def assert_equals(a, b):
+    assert a == b
+
+
+def assert_hash_equal(a, b):
+    assert hash(a) == hash(b)
+
+
+@pytest.fixture(params=[assert_equals, assert_hash_equal], ids=["eq", "hash"])
+def equality_assertion(request):
+    yield request.param
+
+
 class TestFraction:
     def test_fraction_equals_itself(self):
         assert Fraction(2, 3) == Fraction(2, 3)
+
+    def test_zero_numerator(self, equality_assertion):
+        equality_assertion(Fraction(0, 5), Fraction(0, 1))
