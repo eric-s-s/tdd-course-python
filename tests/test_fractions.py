@@ -13,6 +13,20 @@ notes:
 -1 + 2
 neg plus neg
 
+reduction
+0/4 to 0/1
+0/-5 to 0/1
+
+-1/3 to -1/3
+1/-3 to -1/3
+-1/-3 to 1/3
+
+2/4 to 1/2
+8/16 to 1/2
+2/6 to 1/3
+-2/6 to -1/3
+
+
 same denom
 1/5 + 1/5
 
