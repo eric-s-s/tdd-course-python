@@ -109,8 +109,7 @@ class TestFractionsHash:
 
 
 def assert_exact_match(fraction, numerator, denominator):
-    assert fraction.numerator == numerator
-    assert fraction.denominator == denominator
+    assert astuple(fraction) == (numerator, denominator)
 
 
 class TestAdd:
@@ -122,3 +121,11 @@ class TestAdd:
     def test_add_zero_no_change(self, fraction):
         assert Fraction(0, 1) + fraction == fraction
         assert fraction + Fraction(0, 1) == fraction
+
+    def test_add_zero_reduces_other(self):
+        result = Fraction(-6, -15) + Fraction(0, -1)
+        assert_exact_match(result, 2, 5)
+
+    def test_add_same_denominator(self):
+        result = Fraction(-1, 3) + Fraction(-2, 3)
+        assert_exact_match(result, -1, 1)

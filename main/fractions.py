@@ -28,10 +28,10 @@ class Fraction:
     def __hash__(self):
         return hash(astuple(self.reduced()))
 
-    def __add__(self, other):
+    def __add__(self, other: "Fraction") -> "Fraction":
         zero_fraction = Fraction(0, 1)
-        if self == other == zero_fraction:
-            return zero_fraction
         if self == zero_fraction:
-            return other
-        return self
+            return other.reduced()
+        if other == zero_fraction:
+            return self.reduced()
+        return Fraction(self.numerator + other.numerator, self.denominator).reduced()
