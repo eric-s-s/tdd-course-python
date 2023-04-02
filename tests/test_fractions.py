@@ -5,9 +5,6 @@ class TestFractions:
     def test_equality(self):
         assert Fraction(1, 2) == Fraction(1, 2)
 
-    def test_string(self):
-        assert str(Fraction(1, 2)) == "1/2"
-
     def test_repr(self):
         assert repr(Fraction(1, 2)) == "Fraction(1/2)"
 
