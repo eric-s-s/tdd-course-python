@@ -129,3 +129,7 @@ class TestAdd:
     def test_add_same_denominator(self):
         result = Fraction(-1, 3) + Fraction(-2, 3)
         assert_exact_match(result, -1, 1)
+
+    def test_add_similar_denominator(self):
+        result = Fraction(-2, -3) + Fraction(1, 6)
+        assert_exact_match(result, 5, 6)

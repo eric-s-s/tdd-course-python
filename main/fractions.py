@@ -29,9 +29,8 @@ class Fraction:
         return hash(astuple(self.reduced()))
 
     def __add__(self, other: "Fraction") -> "Fraction":
-        zero_fraction = Fraction(0, 1)
-        if self == zero_fraction:
-            return other.reduced()
-        if other == zero_fraction:
-            return self.reduced()
-        return Fraction(self.numerator + other.numerator, self.denominator).reduced()
+        numerator = (
+            self.numerator * other.denominator + other.numerator * self.denominator
+        )
+        denominator = self.denominator * other.denominator
+        return Fraction(numerator, denominator).reduced()
