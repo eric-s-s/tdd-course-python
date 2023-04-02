@@ -43,11 +43,11 @@ multiples denom
 
 
 def assert_equals(a, b):
-    assert a == b
+    assert a == b, (a.reduced(), b.reduced())
 
 
 def assert_hash_equal(a, b):
-    assert hash(a) == hash(b)
+    assert hash(a) == hash(b), (a.reduced(), b.reduced())
 
 
 @pytest.fixture(params=[assert_equals, assert_hash_equal], ids=["eq", "hash"])
@@ -61,3 +61,15 @@ class TestFraction:
 
     def test_zero_numerator(self, equality_assertion):
         equality_assertion(Fraction(0, 5), Fraction(0, 1))
+
+    @pytest.mark.parametrize(
+        "negative", [Fraction(0, -45), Fraction(-0, 2), Fraction(-0, -23423)]
+    )
+    def test_zero_numerator_with_negatives(self, equality_assertion, negative):
+        equality_assertion(negative, Fraction(0, 1))
+
+    def test_single_negative(self, equality_assertion):
+        equality_assertion(Fraction(1, -3), Fraction(-1, 3))
+
+    def test_double_negative(self, equality_assertion):
+        equality_assertion(Fraction(-2, -11), Fraction(2, 11))
