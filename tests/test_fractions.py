@@ -1,3 +1,5 @@
+from dataclasses import astuple
+
 import pytest
 
 from main.fractions import Fraction
@@ -55,21 +57,25 @@ def equality_assertion(request):
     yield request.param
 
 
-class TestFraction:
-    def test_fraction_equals_itself(self):
-        assert Fraction(2, 3) == Fraction(2, 3)
+def assert_reduced(to_reduce, expected):
+    return astuple(to_reduce.reduced()) == astuple(expected)
 
-    def test_zero_numerator(self, equality_assertion):
-        equality_assertion(Fraction(0, 5), Fraction(0, 1))
+
+class TestFractionReduced:
+    def test_fraction_equals_itself(self):
+        assert_reduced(Fraction(2, 3), Fraction(2, 3))
+
+    def test_zero_numerator(self):
+        assert_reduced(Fraction(0, 5), Fraction(0, 1))
 
     @pytest.mark.parametrize(
         "negative", [Fraction(0, -45), Fraction(-0, 2), Fraction(-0, -23423)]
     )
-    def test_zero_numerator_with_negatives(self, equality_assertion, negative):
-        equality_assertion(negative, Fraction(0, 1))
+    def test_zero_numerator_with_negatives(self, negative):
+        assert_reduced(negative, Fraction(0, 1))
 
-    def test_single_negative(self, equality_assertion):
-        equality_assertion(Fraction(1, -3), Fraction(-1, 3))
+    def test_single_negative(self):
+        assert_reduced(Fraction(1, -3), Fraction(-1, 3))
 
-    def test_double_negative(self, equality_assertion):
-        equality_assertion(Fraction(-2, -11), Fraction(2, 11))
+    def test_double_negative(self):
+        assert_reduced(Fraction(-2, -11), Fraction(2, 11))

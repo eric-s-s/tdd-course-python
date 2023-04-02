@@ -12,9 +12,3 @@ class Fraction:
         if self.denominator < 0:
             return Fraction(-self.numerator, -self.denominator)
         return self
-
-    def __eq__(self, other: "Fraction") -> bool:
-        return astuple(self.reduced()) == astuple(other.reduced())
-
-    def __hash__(self):
-        return hash(astuple(self.reduced()))
