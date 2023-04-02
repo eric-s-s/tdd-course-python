@@ -1,4 +1,4 @@
-from fractions import Fraction
+from main.fractions import Fraction
 
 
 class TestFractions:
