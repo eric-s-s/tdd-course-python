@@ -1,0 +1,51 @@
+
+# POS reader/display 
+
+## problem scope
+
+POSSystem:
+
+- displayConnection
+- productCatalog
+
+- onBarcode(Barcode("str"))
+  - getPrice() 
+  - display()
+
+barcodes:
+
+- ""
+- "23948234"
+- "garbage"
+- "23847239847(\r|\n|\t)" or any combination
+
+ProductLookup.getPrice
+
+- no price
+- price
+- multiple prices?  ugh! no!
+
+display()
+
+- response.OK
+- response.FAIL
+
+## test cases
+
+no display:
+1. empty barcode
+
+error displays:
+1. garbage barcode
+2. no lookup found 
+3. no lookup response
+
+retries on lookup?  out of scope!
+
+displays:
+1. single display
+2. multiple requests only shows last one
+3. multiple same request
+4. multiple different request
+
+retries on display?  maaaaaybe
