@@ -19,13 +19,13 @@ class TestDisplay:
         assert display.get_latest() == message
 
 
-@pytest.mark.skip("soon")
-def test_empty_barcode():
-    display = Display()
+class TestPointOfSale:
+    def test_empty_barcode(self):
+        display = Display()
 
-    system = PointOfSaleSystem(display)
+        system = PointOfSaleSystem(display)
 
-    system.on_barcode(barcode="")
+        system.on_barcode(barcode="")
 
-    result = display.get_latest()
-    assert result == ""
+        result = display.get_latest()
+        assert result == ""

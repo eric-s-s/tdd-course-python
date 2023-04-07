@@ -14,7 +14,7 @@ class Display:
 
 class PointOfSaleSystem:
     def __init__(self, display: Display):
-        pass
+        self.display = display
 
     def on_barcode(self, barcode: str):
-        pass
+        self.display.write("")
