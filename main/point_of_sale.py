@@ -1,6 +1,9 @@
+from typing import Optional
+
+
 class Display:
-    def get_latest(self):
-        return ""
+    def get_latest(self) -> Optional[str]:
+        return None
 
 
 class PointOfSaleSystem:

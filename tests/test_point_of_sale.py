@@ -1,6 +1,17 @@
+import pytest
+
 from main.point_of_sale import Display, PointOfSaleSystem
 
 
+class TestDisplay:
+    """Notes: when we get latest, test 0, 1, and many for display calls"""
+
+    def test_get_latest_no_display_calls(self):
+        display = Display()
+        assert display.get_latest() is None
+
+
+@pytest.mark.skip("soon")
 def test_empty_barcode():
     display = Display()
 
