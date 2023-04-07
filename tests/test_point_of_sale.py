@@ -10,6 +10,13 @@ class TestDisplay:
         display = Display()
         assert display.get_latest() is None
 
+    def test_get_latest_with_one_message(self):
+        display = Display()
+        display.write("some string")
+
+        result = display.get_latest()
+        assert result == "some string"
+
 
 @pytest.mark.skip("soon")
 def test_empty_barcode():
