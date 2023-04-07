@@ -37,8 +37,13 @@ no display:
 
 error displays:
 1. garbage barcode
-2. no lookup found 
-3. no lookup response
+2. no lookup found
+
+
+Legit barcodes:
+1. string
+2. 10 digits
+3. trailing and/or leading characters can be space, tab, and new line
 
 retries on lookup?  out of scope!
 
