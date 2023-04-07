@@ -3,13 +3,13 @@ from typing import Optional
 
 class Display:
     def __init__(self):
-        self.thing = None
+        self.latest_message: Optional[str] = None
 
     def get_latest(self) -> Optional[str]:
-        return self.thing
+        return self.latest_message
 
-    def write(self, thing: str):
-        self.thing = thing
+    def write(self, message: str):
+        self.latest_message = message
 
 
 class PointOfSaleSystem:

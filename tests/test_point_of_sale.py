@@ -11,11 +11,12 @@ class TestDisplay:
         assert display.get_latest() is None
 
     def test_get_latest_with_one_message(self):
+        message = "some string"
         display = Display()
-        display.write("some string")
 
-        result = display.get_latest()
-        assert result == "some string"
+        display.write(message)
+
+        assert display.get_latest() == message
 
 
 @pytest.mark.skip("soon")
