@@ -20,6 +20,21 @@ class TestDisplay:
 
 
 class TestPointOfSale:
+    """
+    notes:
+    - empty, empty
+    - error: bad barcode
+    - error: does not exist
+    - error: price response is NaN
+    - empty, error
+    - successful lookup: price
+    - success: leading ignored characters
+    - success: trailing ignored characters
+    - success: leading and trailing ignored characters
+
+    - multiple scans?
+
+    """
     def test_empty_barcode(self):
         display = Display()
 
