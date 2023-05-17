@@ -1,6 +1,6 @@
 import pytest
 
-from main.point_of_sale import Display, PointOfSaleSystem
+from main.point_of_sale import Display, PointOfSaleSystem, BarCode, BarCodeError
 
 
 class TestDisplay:
@@ -19,6 +19,37 @@ class TestDisplay:
         assert display.get_latest() == message
 
 
+class TestBarcode:
+    def test_barcode_correctly_formatted(self):
+        barcode_str = "0983454321"
+        assert BarCode(barcode_str).to_string() == barcode_str
+
+    def test_too_short(self):
+        with pytest.raises(BarCodeError):
+            BarCode("123456789")
+
+    def test_too_long(self):
+        with pytest.raises(BarCodeError):
+            BarCode("12345678901")
+
+    @pytest.mark.parametrize("bad_char", list("a,.$#:"))
+    def test_not_all_digits(self, bad_char):
+        with pytest.raises(BarCodeError):
+            BarCode(f"1234{bad_char}67890")
+
+    def test_removes_whitespace_to_string(self):
+        barcode_str = "2398470982"
+        assert (
+            BarCode(barcode_str).to_string()
+            == BarCode(f"  {barcode_str}  ").to_string()
+            == barcode_str
+        )
+
+    def test_removes_whitespace_equality(self):
+        barcode_str = "0987654321"
+        assert BarCode(barcode_str) == BarCode(f"  {barcode_str} ")
+
+
 class TestPointOfSale:
     """
     notes:
@@ -35,6 +66,7 @@ class TestPointOfSale:
     - multiple scans?
 
     """
+
     def test_empty_barcode(self):
         display = Display()
 
@@ -44,3 +76,11 @@ class TestPointOfSale:
 
         result = display.get_latest()
         assert result == ""
+
+    def test_bad_barcode(self):
+        display = Display()
+        system = PointOfSaleSystem(display)
+
+        system.on_barcode(barcode="abc123")
+
+        assert display.get_latest() == "Bad barcode. Rescan"
