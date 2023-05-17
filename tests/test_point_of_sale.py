@@ -145,3 +145,21 @@ class TestPointOfSale:
 
         assert display.get_latest() == expected
 
+    @pytest.mark.parametrize("return_character", list("\r\n\t"))
+    def test_lookup_with_return_characters(self, return_character):
+        display = Display()
+
+        barcode_str = f"{return_character}{TWO_FIFTY.to_string()}{return_character}"
+        system = PointOfSaleSystem(display, FakePriceLookup())
+        system.on_barcode(barcode_str)
+
+        assert display.get_latest() == "$2.50"
+
+    def test_lookup_with_all_removed_characters(self):
+        display = Display()
+
+        barcode_str = f" \r \t \n {TWO_FIFTY.to_string()} \r \t \n "
+        system = PointOfSaleSystem(display, FakePriceLookup())
+        system.on_barcode(barcode_str)
+
+        assert display.get_latest() == "$2.50"
