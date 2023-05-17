@@ -69,9 +69,7 @@ class TestPointOfSale:
     notes:
     - Xempty, empty
     - Xerror: bad barcode
-    - error: does not exist
-    - error: price response is NaN
-    - empty, error
+    - x error: does not exist
     - successful lookup: price
     - success: leading ignored characters
     - success: trailing ignored characters
@@ -82,7 +80,7 @@ class TestPointOfSale:
     """
 
     @pytest.fixture
-    def barcode(self):
+    def barcode_str(self):
         return "0987654321"
 
     def test_empty_barcode(self):
@@ -103,13 +101,49 @@ class TestPointOfSale:
 
         assert display.get_latest() == "Bad barcode. Rescan"
 
-    def test_no_price_data(self, barcode):
+    def test_no_price_data(self, barcode_str):
         display = Display()
         lookup = Mock()
         lookup.get.side_effect = PriceNotFoundError("oops")
 
         system = PointOfSaleSystem(display, lookup)
 
-        system.on_barcode(barcode)
+        system.on_barcode(barcode_str)
 
         assert display.get_latest() == "Item not found."
+
+    def test_lookup_found(self, barcode_str):
+        price = 123.45
+
+        def get(barcode: BarCode):
+            if barcode.to_string() == barcode_str:
+                return price
+            else:
+                return 0.0
+
+        lookup = Mock()
+        lookup.get = get
+
+        display = Display()
+        system = PointOfSaleSystem(display, lookup)
+        system.on_barcode(barcode_str)
+
+        assert display.get_latest() == f"${price}"
+
+    def test_lookup_found_with_whitespaces(self, barcode_str):
+        price = 123.45
+
+        def get(barcode: BarCode):
+            if barcode.to_string() == barcode_str:
+                return price
+            else:
+                return 0.0
+
+        lookup = Mock()
+        lookup.get = get
+
+        display = Display()
+        system = PointOfSaleSystem(display, lookup)
+        system.on_barcode(f"  {barcode_str}  ")
+
+        assert display.get_latest() == f"${price}"

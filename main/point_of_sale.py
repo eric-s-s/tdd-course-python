@@ -72,4 +72,4 @@ class PointOfSaleSystem:
         except PriceNotFoundError:
             return "Item not found."
 
-        return str(price)
+        return f"${price}"
