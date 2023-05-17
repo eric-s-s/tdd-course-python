@@ -1,6 +1,17 @@
 import pytest
 
-from main.point_of_sale import Display, PointOfSaleSystem, BarCode, BarCodeError
+from main.point_of_sale import (
+    Display,
+    PointOfSaleSystem,
+    BarCode,
+    BarCodeError,
+    AbstractPriceLookup,
+)
+
+
+class FakePriceLookup(AbstractPriceLookup):
+    def get(self, barcode: BarCode) -> float:
+        return 0.0
 
 
 class TestDisplay:
@@ -53,8 +64,8 @@ class TestBarcode:
 class TestPointOfSale:
     """
     notes:
-    - empty, empty
-    - error: bad barcode
+    - Xempty, empty
+    - Xerror: bad barcode
     - error: does not exist
     - error: price response is NaN
     - empty, error
@@ -70,7 +81,7 @@ class TestPointOfSale:
     def test_empty_barcode(self):
         display = Display()
 
-        system = PointOfSaleSystem(display)
+        system = PointOfSaleSystem(display, FakePriceLookup())
 
         system.on_barcode(barcode="")
 
@@ -79,7 +90,7 @@ class TestPointOfSale:
 
     def test_bad_barcode(self):
         display = Display()
-        system = PointOfSaleSystem(display)
+        system = PointOfSaleSystem(display, FakePriceLookup())
 
         system.on_barcode(barcode="abc123")
 

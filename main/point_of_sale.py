@@ -1,21 +1,12 @@
 from typing import Optional
-
-
-class Display:
-    def __init__(self):
-        self.latest_message: Optional[str] = None
-
-    def get_latest(self) -> Optional[str]:
-        return self.latest_message
-
-    def write(self, message: str):
-        self.latest_message = message
-
-
 from dataclasses import dataclass
 
 
 class BarCodeError(Exception):
+    pass
+
+
+class PriceNotFoundError(Exception):
     pass
 
 
@@ -42,16 +33,34 @@ class BarCode:
         return False
 
 
+class Display:
+    def __init__(self):
+        self.latest_message: Optional[str] = None
+
+    def get_latest(self) -> Optional[str]:
+        return self.latest_message
+
+    def write(self, message: str):
+        self.latest_message = message
+
+
+class AbstractPriceLookup:
+    def get(self, barcode: BarCode) -> float:
+        raise NotImplementedError()
+
+
 class PointOfSaleSystem:
-    def __init__(self, display: Display):
+    def __init__(self, display: Display, lookup: AbstractPriceLookup):
         self.display = display
+        self.lookup = lookup
 
     def on_barcode(self, barcode: str):
-        if self.is_bad_barcode(barcode):
-            self.display.write("Bad barcode. Rescan")
-        else:
+        if not barcode:
             self.display.write("")
+            return
 
-    def is_bad_barcode(self, barcode: str) -> bool:
-        if barcode:
-            return True
+        try:
+            barcode = BarCode(barcode)
+        except BarCodeError:
+            self.display.write("Bad barcode. Rescan")
+            return
