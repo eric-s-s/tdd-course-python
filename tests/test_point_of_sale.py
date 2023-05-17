@@ -3,17 +3,17 @@ from unittest.mock import Mock
 import pytest
 
 from main.point_of_sale import (
-    Display,
-    PointOfSaleSystem,
+    AbstractPriceLookup,
     BarCode,
     BarCodeError,
-    AbstractPriceLookup,
+    Display,
+    PointOfSaleSystem,
     PriceNotFoundError,
 )
 
-
 ONE_TWENTY_FIVE = BarCode("1234567890")
 TWO_FIFTY = BarCode("0987654321")
+
 
 class FakePriceLookup(AbstractPriceLookup):
     def get(self, barcode: BarCode) -> float:
@@ -121,10 +121,13 @@ class TestPointOfSale:
 
         assert display.get_latest() == "Item not found."
 
-    @pytest.mark.parametrize("barcode, expected", [
-        (TWO_FIFTY, "$2.50"),
-        (ONE_TWENTY_FIVE, "$1.25"),
-    ])
+    @pytest.mark.parametrize(
+        "barcode, expected",
+        [
+            (TWO_FIFTY, "$2.50"),
+            (ONE_TWENTY_FIVE, "$1.25"),
+        ],
+    )
     def test_lookup_found(self, barcode, expected):
 
         display = Display()
@@ -133,10 +136,13 @@ class TestPointOfSale:
 
         assert display.get_latest() == expected
 
-    @pytest.mark.parametrize("barcode, expected", [
-        (TWO_FIFTY, "$2.50"),
-        (ONE_TWENTY_FIVE, "$1.25"),
-    ])
+    @pytest.mark.parametrize(
+        "barcode, expected",
+        [
+            (TWO_FIFTY, "$2.50"),
+            (ONE_TWENTY_FIVE, "$1.25"),
+        ],
+    )
     def test_lookup_found_with_whitespace(self, barcode, expected):
 
         display = Display()

@@ -1,5 +1,4 @@
 from typing import Optional
-from dataclasses import dataclass
 
 
 class BarCodeError(Exception):
@@ -36,6 +35,7 @@ class BarCode:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.to_string()})"
+
 
 class Display:
     def __init__(self):
