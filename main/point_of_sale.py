@@ -55,12 +55,21 @@ class PointOfSaleSystem:
         self.lookup = lookup
 
     def on_barcode(self, barcode: str):
-        if not barcode:
-            self.display.write("")
-            return
+        display_message = self.get_display_message(barcode)
+        self.display.write(display_message)
+
+    def get_display_message(self, barcode_str: str) -> str:
+        if not barcode_str:
+            return ""
 
         try:
-            barcode = BarCode(barcode)
+            barcode = BarCode(barcode_str)
         except BarCodeError:
-            self.display.write("Bad barcode. Rescan")
-            return
+            return "Bad barcode. Rescan"
+
+        try:
+            price = self.lookup.get(barcode)
+        except PriceNotFoundError:
+            return "Item not found."
+
+        return str(price)

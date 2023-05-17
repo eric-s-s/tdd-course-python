@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 
 from main.point_of_sale import (
@@ -6,6 +8,7 @@ from main.point_of_sale import (
     BarCode,
     BarCodeError,
     AbstractPriceLookup,
+    PriceNotFoundError,
 )
 
 
@@ -78,6 +81,10 @@ class TestPointOfSale:
 
     """
 
+    @pytest.fixture
+    def barcode(self):
+        return "0987654321"
+
     def test_empty_barcode(self):
         display = Display()
 
@@ -95,3 +102,14 @@ class TestPointOfSale:
         system.on_barcode(barcode="abc123")
 
         assert display.get_latest() == "Bad barcode. Rescan"
+
+    def test_no_price_data(self, barcode):
+        display = Display()
+        lookup = Mock()
+        lookup.get.side_effect = PriceNotFoundError("oops")
+
+        system = PointOfSaleSystem(display, lookup)
+
+        system.on_barcode(barcode)
+
+        assert display.get_latest() == "Item not found."
