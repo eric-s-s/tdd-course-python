@@ -12,9 +12,18 @@ from main.point_of_sale import (
 )
 
 
+ONE_TWENTY_FIVE = BarCode("1234567890")
+TWO_FIFTY = BarCode("0987654321")
+
 class FakePriceLookup(AbstractPriceLookup):
     def get(self, barcode: BarCode) -> float:
-        return 0.0
+        mapping = {
+            ONE_TWENTY_FIVE: 1.25,
+            TWO_FIFTY: 2.5,
+        }
+        if barcode not in mapping:
+            raise PriceNotFoundError(f"{barcode!r} not in lookup")
+        return mapping[barcode]
 
 
 class TestDisplay:
@@ -112,38 +121,27 @@ class TestPointOfSale:
 
         assert display.get_latest() == "Item not found."
 
-    def test_lookup_found(self, barcode_str):
-        price = 123.45
-
-        def get(barcode: BarCode):
-            if barcode.to_string() == barcode_str:
-                return price
-            else:
-                return 0.0
-
-        lookup = Mock()
-        lookup.get = get
+    @pytest.mark.parametrize("barcode, expected", [
+        (TWO_FIFTY, "$2.50"),
+        (ONE_TWENTY_FIVE, "$1.25"),
+    ])
+    def test_lookup_found(self, barcode, expected):
 
         display = Display()
-        system = PointOfSaleSystem(display, lookup)
-        system.on_barcode(barcode_str)
+        system = PointOfSaleSystem(display, FakePriceLookup())
+        system.on_barcode(barcode.to_string())
 
-        assert display.get_latest() == f"${price}"
+        assert display.get_latest() == expected
 
-    def test_lookup_found_with_whitespaces(self, barcode_str):
-        price = 123.45
-
-        def get(barcode: BarCode):
-            if barcode.to_string() == barcode_str:
-                return price
-            else:
-                return 0.0
-
-        lookup = Mock()
-        lookup.get = get
+    @pytest.mark.parametrize("barcode, expected", [
+        (TWO_FIFTY, "$2.50"),
+        (ONE_TWENTY_FIVE, "$1.25"),
+    ])
+    def test_lookup_found_with_whitespace(self, barcode, expected):
 
         display = Display()
-        system = PointOfSaleSystem(display, lookup)
-        system.on_barcode(f"  {barcode_str}  ")
+        system = PointOfSaleSystem(display, FakePriceLookup())
+        system.on_barcode(f"  {barcode.to_string()}  ")
 
-        assert display.get_latest() == f"${price}"
+        assert display.get_latest() == expected
+

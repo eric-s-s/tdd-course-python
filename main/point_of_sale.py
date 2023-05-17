@@ -10,28 +10,32 @@ class PriceNotFoundError(Exception):
     pass
 
 
-@dataclass(frozen=True)
 class BarCode:
-    _value: str
+    def __init__(self, barcode_str: str):
+        to_use = barcode_str.strip()
+        self._value = to_use
+        self._validate()
 
-    def __post_init__(self):
+    def to_string(self):
+        return self._value
+
+    def _validate(self):
         expected_len = 10
         if len(self.to_string()) != expected_len:
             raise BarCodeError("Bar code should be 10 digits")
         if not self.to_string().isdigit():
             raise BarCodeError("Bar code contains non digits")
 
-    def to_string(self) -> str:
-        return self._value.strip()
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.to_string()})"
-
     def __eq__(self, other):
         if isinstance(other, BarCode):
             return self.to_string() == other.to_string()
         return False
 
+    def __hash__(self):
+        return hash(self.to_string())
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.to_string()})"
 
 class Display:
     def __init__(self):
@@ -72,4 +76,4 @@ class PointOfSaleSystem:
         except PriceNotFoundError:
             return "Item not found."
 
-        return f"${price}"
+        return f"${price:.2f}"
