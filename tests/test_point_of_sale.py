@@ -1,5 +1,3 @@
-from unittest.mock import Mock
-
 import pytest
 
 from main.point_of_sale import (
@@ -24,6 +22,21 @@ class FakePriceLookup(AbstractPriceLookup):
         if barcode not in mapping:
             raise PriceNotFoundError(f"{barcode!r} not in lookup")
         return mapping[barcode]
+
+
+@pytest.fixture(scope="session")
+def lookup():
+    return FakePriceLookup()
+
+
+@pytest.fixture(scope="session")
+def display():
+    return Display()
+
+
+@pytest.fixture(scope="session")
+def system(lookup, display):
+    return PointOfSaleSystem(display, lookup)
 
 
 class TestDisplay:
@@ -88,36 +101,23 @@ class TestPointOfSale:
 
     """
 
-    @pytest.fixture
-    def barcode_str(self):
-        return "0987654321"
-
-    def test_empty_barcode(self):
-        display = Display()
-
-        system = PointOfSaleSystem(display, FakePriceLookup())
-
+    def test_empty_barcode(self, system, display):
         system.on_barcode(barcode="")
 
         result = display.get_latest()
         assert result == ""
 
-    def test_bad_barcode(self):
-        display = Display()
-        system = PointOfSaleSystem(display, FakePriceLookup())
-
+    def test_bad_barcode(self, system, display):
         system.on_barcode(barcode="abc123")
 
         assert display.get_latest() == "Bad barcode. Rescan"
 
-    def test_no_price_data(self, barcode_str):
-        display = Display()
-        lookup = Mock()
-        lookup.get.side_effect = PriceNotFoundError("oops")
+    def test_no_price_data(self, system, display, lookup):
+        missing_barcode_str = "1234509876"
+        with pytest.raises(PriceNotFoundError):
+            lookup.get(BarCode(missing_barcode_str))
 
-        system = PointOfSaleSystem(display, lookup)
-
-        system.on_barcode(barcode_str)
+        system.on_barcode(missing_barcode_str)
 
         assert display.get_latest() == "Item not found."
 
@@ -128,10 +128,7 @@ class TestPointOfSale:
             (ONE_TWENTY_FIVE, "$1.25"),
         ],
     )
-    def test_lookup_found(self, barcode, expected):
-
-        display = Display()
-        system = PointOfSaleSystem(display, FakePriceLookup())
+    def test_lookup_found(self, barcode, expected, display, system):
         system.on_barcode(barcode.to_string())
 
         assert display.get_latest() == expected
@@ -143,29 +140,22 @@ class TestPointOfSale:
             (ONE_TWENTY_FIVE, "$1.25"),
         ],
     )
-    def test_lookup_found_with_whitespace(self, barcode, expected):
-
-        display = Display()
-        system = PointOfSaleSystem(display, FakePriceLookup())
+    def test_lookup_found_with_whitespace(self, barcode, expected, display, system):
         system.on_barcode(f"  {barcode.to_string()}  ")
 
         assert display.get_latest() == expected
 
     @pytest.mark.parametrize("return_character", list("\r\n\t"))
-    def test_lookup_with_return_characters(self, return_character):
-        display = Display()
-
+    def test_lookup_with_return_characters(self, return_character, display, system):
         barcode_str = f"{return_character}{TWO_FIFTY.to_string()}{return_character}"
-        system = PointOfSaleSystem(display, FakePriceLookup())
+
         system.on_barcode(barcode_str)
 
         assert display.get_latest() == "$2.50"
 
-    def test_lookup_with_all_removed_characters(self):
-        display = Display()
-
+    def test_lookup_with_all_removed_characters(self, display, system):
         barcode_str = f" \r \t \n {TWO_FIFTY.to_string()} \r \t \n "
-        system = PointOfSaleSystem(display, FakePriceLookup())
+
         system.on_barcode(barcode_str)
 
         assert display.get_latest() == "$2.50"
