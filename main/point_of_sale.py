@@ -20,10 +20,14 @@ class BarCode:
 
     def _validate(self):
         expected_len = 10
+        if not self.to_string():
+            raise BarCodeError("No input.")
         if len(self.to_string()) != expected_len:
-            raise BarCodeError("Bar code should be 10 digits")
+            msg = f"Bad barcode: {self.to_string()}. Should be ten digits."
+            raise BarCodeError(msg)
         if not self.to_string().isdigit():
-            raise BarCodeError("Bar code contains non digits")
+            msg = f"Bad barcode: {self.to_string()}. Should only contain digits."
+            raise BarCodeError(msg)
 
     def __eq__(self, other):
         if isinstance(other, BarCode):
@@ -63,9 +67,6 @@ class PointOfSaleSystem:
         self.display.write(display_message)
 
     def get_display_message(self, barcode_str: str) -> str:
-        if not barcode_str:
-            return ""
-
         try:
             barcode = BarCode(barcode_str)
         except BarCodeError:
@@ -74,6 +75,6 @@ class PointOfSaleSystem:
         try:
             price = self.lookup.get(barcode)
         except PriceNotFoundError:
-            return "Item not found."
+            return f"Item not found: {barcode.to_string()}."
 
         return f"${price:.2f}"

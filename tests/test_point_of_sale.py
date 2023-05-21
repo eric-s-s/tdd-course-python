@@ -61,17 +61,24 @@ class TestBarcode:
         assert BarCode(barcode_str).to_string() == barcode_str
 
     def test_too_short(self):
+        barcode_string = "123456789"
         with pytest.raises(BarCodeError):
-            BarCode("123456789")
+            BarCode(barcode_string)
 
     def test_too_long(self):
+        barcode_str = "12345678901"
         with pytest.raises(BarCodeError):
-            BarCode("12345678901")
+            BarCode(barcode_str)
 
-    @pytest.mark.parametrize("bad_char", list("a,.$#:"))
-    def test_not_all_digits(self, bad_char):
+    def test_empty(self):
         with pytest.raises(BarCodeError):
-            BarCode(f"1234{bad_char}67890")
+            BarCode("")
+
+    @pytest.mark.parametrize("bad_char", list("a,.#:"))
+    def test_not_all_digits(self, bad_char):
+        barcode_str = f"1234{bad_char}67890"
+        with pytest.raises(BarCodeError):
+            BarCode(barcode_str)
 
     def test_removes_whitespace_to_string(self):
         barcode_str = "2398470982"
@@ -105,7 +112,7 @@ class TestPointOfSale:
         system.on_barcode(barcode="")
 
         result = display.get_latest()
-        assert result == ""
+        assert result == "Bad barcode. Rescan"
 
     def test_bad_barcode(self, system, display):
         system.on_barcode(barcode="abc123")
@@ -119,7 +126,7 @@ class TestPointOfSale:
 
         system.on_barcode(missing_barcode_str)
 
-        assert display.get_latest() == "Item not found."
+        assert display.get_latest() == f"Item not found: {missing_barcode_str}."
 
     @pytest.mark.parametrize(
         "barcode, expected",
