@@ -1,5 +1,5 @@
 from typing import Optional
-
+from dataclasses import dataclass
 
 class BarCodeError(Exception):
     pass
@@ -9,7 +9,27 @@ class PriceNotFoundError(Exception):
     pass
 
 
-class BarCode:
+@dataclass
+class Price:
+    _value: float
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._value})"
+
+    def to_display_string(self):
+        return f"${self._value:.2f}"
+
+class Stringifiable:
+    def to_string(self):
+        raise NotImplementedError()
+
+
+class DummyBarcode(Stringifiable):
+    def to_string(self):
+        return "EMPTY"
+
+
+class BarCode(Stringifiable):
     def __init__(self, barcode_str: str):
         to_use = barcode_str.strip()
         self._value = to_use
@@ -54,15 +74,18 @@ class Display:
     def write_bad_barcode_message(self):
         self.write("Bad barcode. Rescan")
 
-    def write_price_not_found_message(self, barcode: BarCode):
+    def write_price_not_found_message(self, barcode: Stringifiable):
         self.write(f"Item not found: {barcode.to_string()}.")
 
-    def write_price_message(self, price: float):
-        self.write(f"${price:.2f}")
+    def write_price_message(self, price: Price):
+        self.write(price.to_display_string())
 
 
 class AbstractPriceLookup:
     def get(self, barcode: BarCode) -> float:
+        raise NotImplementedError()
+
+    def get_price(self, barcode: BarCode) -> Price:
         raise NotImplementedError()
 
 
@@ -71,30 +94,13 @@ class PointOfSaleSystem:
         self.display = display
         self.lookup = lookup
 
-    def on_barcode(self, barcode: str):
+    def on_barcode(self, barcode_string: str):
+        barcode = DummyBarcode()
         try:
-            barcode_object = BarCode(barcode)
+            barcode = BarCode(barcode_string)
+            price = self.lookup.get_price(barcode)
+            self.display.write_price_message(price)
         except BarCodeError:
             self.display.write_bad_barcode_message()
-            return
-
-        try:
-            price = self.lookup.get(barcode_object)
         except PriceNotFoundError:
-            self.display.write_price_not_found_message(barcode_object)
-            return
-
-        self.display.write_price_message(price)
-
-    def get_display_message(self, barcode_str: str) -> str:
-        try:
-            barcode = BarCode(barcode_str)
-        except BarCodeError:
-            return "Bad barcode. Rescan"
-
-        try:
-            price = self.lookup.get(barcode)
-        except PriceNotFoundError:
-            return f"Item not found: {barcode.to_string()}."
-
-        return f"${price:.2f}"
+            self.display.write_price_not_found_message(barcode)

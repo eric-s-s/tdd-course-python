@@ -10,16 +10,22 @@ from main.point_of_sale import (
     PointOfSaleSystem,
     PriceNotFoundError,
 )
+from point_of_sale import Price
 
 
 class FakePriceLookup(AbstractPriceLookup):
     def __init__(self, barcode_to_price: Dict[BarCode, float]):
         self._mapping = {k: v for k, v in barcode_to_price.items()}
-
     def get(self, barcode: BarCode) -> float:
         if barcode not in self._mapping:
             raise PriceNotFoundError(f"{barcode!r} not in lookup")
         return self._mapping[barcode]
+
+    def get_price(self, barcode: BarCode) -> Price:
+        return Price(self.get(barcode))
+
+
+
 
 
 @pytest.fixture(scope="session")
@@ -113,13 +119,13 @@ class TestPointOfSale:
             yield two_fifty_barcode, request.param
 
     def test_empty_barcode(self, system, display):
-        system.on_barcode(barcode="")
+        system.on_barcode(barcode_string="")
 
         result = display.get_latest()
         assert result == "Bad barcode. Rescan"
 
     def test_bad_barcode(self, system, display):
-        system.on_barcode(barcode="abc123")
+        system.on_barcode(barcode_string="abc123")
 
         assert display.get_latest() == "Bad barcode. Rescan"
 
