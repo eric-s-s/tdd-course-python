@@ -51,6 +51,15 @@ class Display:
     def write(self, message: str):
         self.latest_message = message
 
+    def write_bad_barcode_message(self):
+        self.write("Bad barcode. Rescan")
+
+    def write_price_not_found_message(self, barcode: BarCode):
+        self.write(f"Item not found: {barcode.to_string()}.")
+
+    def write_price_message(self, price: float):
+        self.write(f"${price:.2f}")
+
 
 class AbstractPriceLookup:
     def get(self, barcode: BarCode) -> float:
@@ -63,8 +72,19 @@ class PointOfSaleSystem:
         self.lookup = lookup
 
     def on_barcode(self, barcode: str):
-        display_message = self.get_display_message(barcode)
-        self.display.write(display_message)
+        try:
+            barcode_object = BarCode(barcode)
+        except BarCodeError:
+            self.display.write_bad_barcode_message()
+            return
+
+        try:
+            price = self.lookup.get(barcode_object)
+        except PriceNotFoundError:
+            self.display.write_price_not_found_message(barcode_object)
+            return
+
+        self.display.write_price_message(price)
 
     def get_display_message(self, barcode_str: str) -> str:
         try:
