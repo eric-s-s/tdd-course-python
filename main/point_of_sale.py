@@ -1,5 +1,6 @@
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
+
 
 class BarCodeError(Exception):
     pass
@@ -18,6 +19,7 @@ class Price:
 
     def to_display_string(self):
         return f"${self._value:.2f}"
+
 
 class Stringifiable:
     def to_string(self):
@@ -82,9 +84,6 @@ class Display:
 
 
 class AbstractPriceLookup:
-    def get(self, barcode: BarCode) -> float:
-        raise NotImplementedError()
-
     def get_price(self, barcode: BarCode) -> Price:
         raise NotImplementedError()
 

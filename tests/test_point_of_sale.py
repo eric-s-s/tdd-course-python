@@ -1,6 +1,7 @@
 from typing import Dict
 
 import pytest
+from point_of_sale import Price
 
 from main.point_of_sale import (
     AbstractPriceLookup,
@@ -10,48 +11,21 @@ from main.point_of_sale import (
     PointOfSaleSystem,
     PriceNotFoundError,
 )
-from point_of_sale import Price
 
 
 class FakePriceLookup(AbstractPriceLookup):
-    def __init__(self, barcode_to_price: Dict[BarCode, float]):
+    def __init__(self, barcode_to_price: Dict[BarCode, Price]):
         self._mapping = {k: v for k, v in barcode_to_price.items()}
-    def get(self, barcode: BarCode) -> float:
+
+    def get_price(self, barcode: BarCode) -> float:
         if barcode not in self._mapping:
             raise PriceNotFoundError(f"{barcode!r} not in lookup")
         return self._mapping[barcode]
-
-    def get_price(self, barcode: BarCode) -> Price:
-        return Price(self.get(barcode))
-
-
-
-
-
-@pytest.fixture(scope="session")
-def one_twenty_five_barcode():
-    return BarCode("2345678901")
-
-
-@pytest.fixture(scope="session")
-def two_fifty_barcode():
-    return BarCode("0987654321")
-
-
-@pytest.fixture(scope="session")
-def lookup(one_twenty_five_barcode, two_fifty_barcode):
-    barcode_to_price = {one_twenty_five_barcode: 1.25, two_fifty_barcode: 2.50}
-    return FakePriceLookup(barcode_to_price)
 
 
 @pytest.fixture(scope="session")
 def display():
     return Display()
-
-
-@pytest.fixture(scope="session")
-def system(lookup, display):
-    return PointOfSaleSystem(display, lookup)
 
 
 class TestDisplay:
@@ -109,6 +83,26 @@ class TestBarcode:
 
 
 class TestPointOfSale:
+    @pytest.fixture(scope="session")
+    def one_twenty_five_barcode(self):
+        return BarCode("2345678901")
+
+    @pytest.fixture(scope="session")
+    def two_fifty_barcode(self):
+        return BarCode("0987654321")
+
+    @pytest.fixture(scope="session")
+    def lookup(self, one_twenty_five_barcode, two_fifty_barcode):
+        barcode_to_price = {
+            one_twenty_five_barcode: Price(1.25),
+            two_fifty_barcode: Price(2.50),
+        }
+        return FakePriceLookup(barcode_to_price)
+
+    @pytest.fixture(scope="session")
+    def system(self, lookup, display):
+        return PointOfSaleSystem(display, lookup)
+
     @pytest.fixture(params=["$1.25", "$2.50"], ids=["one twenty five", "two fifty"])
     def barcode_and_expected_string(
         self, request, one_twenty_five_barcode, two_fifty_barcode
@@ -132,7 +126,7 @@ class TestPointOfSale:
     def test_no_price_data(self, system, display, lookup):
         missing_barcode_str = "1234509876"
         with pytest.raises(PriceNotFoundError):
-            lookup.get(BarCode(missing_barcode_str))
+            lookup.get_price(BarCode(missing_barcode_str))
 
         system.on_barcode(missing_barcode_str)
 
