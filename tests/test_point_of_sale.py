@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytest
 
 from main.point_of_sale import (
@@ -9,24 +11,35 @@ from main.point_of_sale import (
     PriceNotFoundError,
 )
 
-ONE_TWENTY_FIVE = BarCode("1234567890")
-TWO_FIFTY = BarCode("0987654321")
-
-
 class FakePriceLookup(AbstractPriceLookup):
+
+    def __init__(self, barcode_to_price: Dict[BarCode, float]):
+        self._mapping = {k: v for k, v in barcode_to_price.items()}
+
     def get(self, barcode: BarCode) -> float:
-        mapping = {
-            ONE_TWENTY_FIVE: 1.25,
-            TWO_FIFTY: 2.5,
-        }
-        if barcode not in mapping:
+        if barcode not in self._mapping:
             raise PriceNotFoundError(f"{barcode!r} not in lookup")
-        return mapping[barcode]
+        return self._mapping[barcode]
 
 
 @pytest.fixture(scope="session")
-def lookup():
-    return FakePriceLookup()
+def one_twenty_five_barcode():
+    return BarCode("2345678901")
+
+
+@pytest.fixture(scope="session")
+def two_fifty_barcode():
+    return BarCode("0987654321")
+
+
+
+@pytest.fixture(scope="session")
+def lookup(one_twenty_five_barcode, two_fifty_barcode):
+    barcode_to_price = {
+        one_twenty_five_barcode: 1.25,
+        two_fifty_barcode: 2.50
+    }
+    return FakePriceLookup(barcode_to_price)
 
 
 @pytest.fixture(scope="session")
@@ -108,6 +121,13 @@ class TestPointOfSale:
 
     """
 
+    @pytest.fixture(params=["$1.25", "$2.50"], ids=["one twenty five", "two fifty"])
+    def barcode_and_expected_string(self, request, one_twenty_five_barcode, two_fifty_barcode):
+        if request.param == "$1.25":
+            yield one_twenty_five_barcode, request.param
+        else:
+            yield two_fifty_barcode, request.param
+
     def test_empty_barcode(self, system, display):
         system.on_barcode(barcode="")
 
@@ -128,40 +148,28 @@ class TestPointOfSale:
 
         assert display.get_latest() == f"Item not found: {missing_barcode_str}."
 
-    @pytest.mark.parametrize(
-        "barcode, expected",
-        [
-            (TWO_FIFTY, "$2.50"),
-            (ONE_TWENTY_FIVE, "$1.25"),
-        ],
-    )
-    def test_lookup_found(self, barcode, expected, display, system):
+    def test_lookup_found(self, barcode_and_expected_string, display, system):
+        barcode, expected = barcode_and_expected_string
         system.on_barcode(barcode.to_string())
 
         assert display.get_latest() == expected
 
-    @pytest.mark.parametrize(
-        "barcode, expected",
-        [
-            (TWO_FIFTY, "$2.50"),
-            (ONE_TWENTY_FIVE, "$1.25"),
-        ],
-    )
-    def test_lookup_found_with_whitespace(self, barcode, expected, display, system):
+    def test_lookup_found_with_whitespace(self, barcode_and_expected_string, display, system):
+        barcode, expected = barcode_and_expected_string
         system.on_barcode(f"  {barcode.to_string()}  ")
 
         assert display.get_latest() == expected
 
     @pytest.mark.parametrize("return_character", list("\r\n\t"))
-    def test_lookup_with_return_characters(self, return_character, display, system):
-        barcode_str = f"{return_character}{TWO_FIFTY.to_string()}{return_character}"
+    def test_lookup_with_return_characters(self, return_character, display, system, two_fifty_barcode):
+        barcode_str = f"{return_character}{two_fifty_barcode.to_string()}{return_character}"
 
         system.on_barcode(barcode_str)
 
         assert display.get_latest() == "$2.50"
 
-    def test_lookup_with_all_removed_characters(self, display, system):
-        barcode_str = f" \r \t \n {TWO_FIFTY.to_string()} \r \t \n "
+    def test_lookup_with_all_removed_characters(self, display, system, two_fifty_barcode):
+        barcode_str = f" \r \t \n {two_fifty_barcode.to_string()} \r \t \n "
 
         system.on_barcode(barcode_str)
 
