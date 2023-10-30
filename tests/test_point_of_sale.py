@@ -27,6 +27,26 @@ class FakePriceLookup(AbstractPriceLookup):
 def display():
     return Display()
 
+@pytest.fixture(scope="session")
+def one_twenty_five_barcode():
+    return BarCode("2345678901")
+
+@pytest.fixture(scope="session")
+def two_fifty_barcode():
+    return BarCode("0987654321")
+
+@pytest.fixture(scope="session")
+def lookup(one_twenty_five_barcode, two_fifty_barcode):
+    barcode_to_price = {
+        one_twenty_five_barcode: Price(1.25),
+        two_fifty_barcode: Price(2.50),
+    }
+    return FakePriceLookup(barcode_to_price)
+
+@pytest.fixture(scope="session")
+def system(lookup, display):
+    return PointOfSaleSystem(display, lookup)
+
 
 class TestDisplay:
     """Notes: when we get latest, test 0, 1, and many for display calls"""
@@ -82,27 +102,7 @@ class TestBarcode:
         assert BarCode(barcode_str) == BarCode(f"  {barcode_str} ")
 
 
-class TestPointOfSale:
-    @pytest.fixture(scope="session")
-    def one_twenty_five_barcode(self):
-        return BarCode("2345678901")
-
-    @pytest.fixture(scope="session")
-    def two_fifty_barcode(self):
-        return BarCode("0987654321")
-
-    @pytest.fixture(scope="session")
-    def lookup(self, one_twenty_five_barcode, two_fifty_barcode):
-        barcode_to_price = {
-            one_twenty_five_barcode: Price(1.25),
-            two_fifty_barcode: Price(2.50),
-        }
-        return FakePriceLookup(barcode_to_price)
-
-    @pytest.fixture(scope="session")
-    def system(self, lookup, display):
-        return PointOfSaleSystem(display, lookup)
-
+class TestPointOfSaleSingleItem:
     @pytest.fixture(params=["$1.25", "$2.50"], ids=["one twenty five", "two fifty"])
     def barcode_and_expected_string(
         self, request, one_twenty_five_barcode, two_fifty_barcode
@@ -166,3 +166,10 @@ class TestPointOfSale:
         system.on_barcode(barcode_str)
 
         assert display.get_latest() == "$2.50"
+
+
+class TestPointOfSaleTotal:
+    def test_no_items_scanned(self, system, display):
+        system.on_total()
+
+        assert display.get_latest() == "No items scanned. No total."
