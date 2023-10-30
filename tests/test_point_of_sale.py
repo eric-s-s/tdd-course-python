@@ -3,14 +3,8 @@ from typing import Dict
 import pytest
 from point_of_sale import Price
 
-from main.point_of_sale import (
-    AbstractPriceLookup,
-    BarCode,
-    BarCodeError,
-    Display,
-    PointOfSaleSystem,
-    PriceNotFoundError,
-)
+from main.point_of_sale import (AbstractPriceLookup, BarCode, BarCodeError,
+                                Display, PointOfSaleSystem, PriceNotFoundError)
 
 
 class FakePriceLookup(AbstractPriceLookup):
@@ -27,13 +21,16 @@ class FakePriceLookup(AbstractPriceLookup):
 def display():
     return Display()
 
+
 @pytest.fixture(scope="session")
 def one_twenty_five_barcode():
     return BarCode("2345678901")
 
+
 @pytest.fixture(scope="session")
 def two_fifty_barcode():
     return BarCode("0987654321")
+
 
 @pytest.fixture(scope="session")
 def lookup(one_twenty_five_barcode, two_fifty_barcode):
@@ -42,6 +39,7 @@ def lookup(one_twenty_five_barcode, two_fifty_barcode):
         two_fifty_barcode: Price(2.50),
     }
     return FakePriceLookup(barcode_to_price)
+
 
 @pytest.fixture(scope="session")
 def system(lookup, display):
