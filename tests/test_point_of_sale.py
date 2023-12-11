@@ -1,7 +1,6 @@
 from typing import Dict
 
 import pytest
-from point_of_sale import Price
 
 from main.point_of_sale import (
     AbstractPriceLookup,
@@ -10,6 +9,7 @@ from main.point_of_sale import (
     Display,
     PointOfSaleSystem,
     PriceNotFoundError,
+    Price,
 )
 
 
@@ -183,3 +183,12 @@ class TestPointOfSaleOnTotal:
         system.on_total()
 
         assert display.get_latest() == "Total: $2.50"
+
+    def test_two_items_scanned(
+        self, system, display, one_twenty_five_barcode, two_fifty_barcode
+    ):
+        system.on_barcode(two_fifty_barcode.to_string())
+        system.on_barcode(one_twenty_five_barcode.to_string())
+        system.on_total()
+
+        assert display.get_latest() == "Total: $3.75"

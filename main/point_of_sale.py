@@ -17,6 +17,11 @@ class Price:
     def __repr__(self):
         return f"{self.__class__.__name__}({self._value})"
 
+    def __add__(self, other) -> "Price":
+        if not isinstance(other, Price):
+            raise TypeError(f"Tried to add {self.__class__} to {other.__class__}")
+        return Price(self._value + other._value)
+
     def to_display_string(self):
         return f"${self._value:.2f}"
 
@@ -98,7 +103,7 @@ class PointOfSaleSystem:
     def __init__(self, display: Display, lookup: AbstractPriceLookup):
         self.display = display
         self.lookup = lookup
-        self._last_scanned_price: Optional[Price] = None
+        self._current_session = []
 
     def on_barcode(self, barcode_string: str):
         barcode = DummyBarcode()
@@ -106,14 +111,15 @@ class PointOfSaleSystem:
             barcode = BarCode(barcode_string)
             price = self.lookup.get_price(barcode)
             self.display.write_price_scanned_message(price)
-            self._last_scanned_price = price
+            self._current_session.append(price)
         except BarCodeError:
             self.display.write_bad_barcode_message()
         except PriceNotFoundError:
             self.display.write_price_not_found_message(barcode)
 
     def on_total(self):
-        if not self._last_scanned_price:
+        if not self._current_session:
             self.display.write_no_total_message()
         else:
-            self.display.write_total_price_message(self._last_scanned_price)
+            total = sum(self._current_session, start=Price(0))
+            self.display.write_total_price_message(total)
