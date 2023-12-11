@@ -23,7 +23,7 @@ class Price:
         return Price(self._value + other._value)
 
     def to_display_string(self):
-        return f"${self._value:.2f}"
+        return f"${self._value:,.2f}"
 
 
 class Stringifiable:

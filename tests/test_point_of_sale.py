@@ -52,6 +52,23 @@ def system(lookup, display):
     return PointOfSaleSystem(display, lookup)
 
 
+class TestPrice:
+    @pytest.mark.parametrize(
+        "value, expected_string",
+        [
+            (0.0, "$0.00"),
+            (1.0, "$1.00"),
+            (1.1, "$1.10"),
+            (1.23, "$1.23"),
+            (12.3, "$12.30"),
+            (1_234.5, "$1,234.50"),
+            (12_345_678.9, "$12,345,678.90"),
+        ],
+    )
+    def test_to_string(self, value, expected_string):
+        assert Price(value).to_display_string() == expected_string
+
+
 class TestDisplay:
     """Notes: when we get latest, test 0, 1, and many for display calls"""
 
