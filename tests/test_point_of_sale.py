@@ -3,8 +3,14 @@ from typing import Dict
 import pytest
 from point_of_sale import Price
 
-from main.point_of_sale import (AbstractPriceLookup, BarCode, BarCodeError,
-                                Display, PointOfSaleSystem, PriceNotFoundError)
+from main.point_of_sale import (
+    AbstractPriceLookup,
+    BarCode,
+    BarCodeError,
+    Display,
+    PointOfSaleSystem,
+    PriceNotFoundError,
+)
 
 
 class FakePriceLookup(AbstractPriceLookup):
