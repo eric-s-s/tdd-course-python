@@ -98,7 +98,7 @@ class PointOfSaleSystem:
     def __init__(self, display: Display, lookup: AbstractPriceLookup):
         self.display = display
         self.lookup = lookup
-        self._price: Optional[Price] = None
+        self._last_scanned_price: Optional[Price] = None
 
     def on_barcode(self, barcode_string: str):
         barcode = DummyBarcode()
@@ -106,14 +106,14 @@ class PointOfSaleSystem:
             barcode = BarCode(barcode_string)
             price = self.lookup.get_price(barcode)
             self.display.write_price_scanned_message(price)
-            self._price = price
+            self._last_scanned_price = price
         except BarCodeError:
             self.display.write_bad_barcode_message()
         except PriceNotFoundError:
             self.display.write_price_not_found_message(barcode)
 
     def on_total(self):
-        if not self._price:
+        if not self._last_scanned_price:
             self.display.write_no_total_message()
         else:
-            self.display.write_total_price_message(self._price)
+            self.display.write_total_price_message(self._last_scanned_price)
