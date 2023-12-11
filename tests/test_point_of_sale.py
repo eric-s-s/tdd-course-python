@@ -63,7 +63,7 @@ class TestDisplay:
         message = "some string"
         display = Display()
 
-        display.write(message)
+        display._write(message)
 
         assert display.get_latest() == message
 

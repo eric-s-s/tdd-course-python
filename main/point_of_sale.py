@@ -65,22 +65,28 @@ class BarCode(Stringifiable):
 
 class Display:
     def __init__(self):
-        self.latest_message: Optional[str] = None
+        self._latest_message: Optional[str] = None
 
     def get_latest(self) -> Optional[str]:
-        return self.latest_message
+        return self._latest_message
 
-    def write(self, message: str):
-        self.latest_message = message
+    def _write(self, message: str):
+        self._latest_message = message
 
     def write_bad_barcode_message(self):
-        self.write("Bad barcode. Rescan")
+        self._write("Bad barcode. Rescan")
 
     def write_price_not_found_message(self, barcode: Stringifiable):
-        self.write(f"Item not found: {barcode.to_string()}.")
+        self._write(f"Item not found: {barcode.to_string()}.")
 
-    def write_price_message(self, price: Price):
-        self.write(price.to_display_string())
+    def write_price_scanned_message(self, price: Price):
+        self._write(price.to_display_string())
+
+    def write_no_total_message(self):
+        self._write("No items scanned. No total.")
+
+    def write_total_price_message(self, price: Price):
+        self._write(f"Total: {price.to_display_string()}")
 
 
 class AbstractPriceLookup:
@@ -99,7 +105,7 @@ class PointOfSaleSystem:
         try:
             barcode = BarCode(barcode_string)
             price = self.lookup.get_price(barcode)
-            self.display.write_price_message(price)
+            self.display.write_price_scanned_message(price)
             self._price = price
         except BarCodeError:
             self.display.write_bad_barcode_message()
@@ -108,6 +114,6 @@ class PointOfSaleSystem:
 
     def on_total(self):
         if not self._price:
-            self.display.write("No items scanned. No total.")
+            self.display.write_no_total_message()
         else:
-            self.display.write(f"Total: {self._price.to_display_string()}")
+            self.display.write_total_price_message(self._price)
