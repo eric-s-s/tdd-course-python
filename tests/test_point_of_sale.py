@@ -17,22 +17,22 @@ class FakePriceLookup(AbstractPriceLookup):
         return self._mapping[barcode]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def display():
     return Display()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def one_twenty_five_barcode():
     return BarCode("2345678901")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def two_fifty_barcode():
     return BarCode("0987654321")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def lookup(one_twenty_five_barcode, two_fifty_barcode):
     barcode_to_price = {
         one_twenty_five_barcode: Price(1.25),
@@ -41,7 +41,7 @@ def lookup(one_twenty_five_barcode, two_fifty_barcode):
     return FakePriceLookup(barcode_to_price)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def system(lookup, display):
     return PointOfSaleSystem(display, lookup)
 
@@ -100,7 +100,7 @@ class TestBarcode:
         assert BarCode(barcode_str) == BarCode(f"  {barcode_str} ")
 
 
-class TestPointOfSaleSingleItem:
+class TestPointOfSaleScanSingleItem:
     @pytest.fixture(params=["$1.25", "$2.50"], ids=["one twenty five", "two fifty"])
     def barcode_and_expected_string(
         self, request, one_twenty_five_barcode, two_fifty_barcode
@@ -166,8 +166,14 @@ class TestPointOfSaleSingleItem:
         assert display.get_latest() == "$2.50"
 
 
-class TestPointOfSaleTotal:
+class TestPointOfSaleOnTotal:
     def test_no_items_scanned(self, system, display):
         system.on_total()
 
         assert display.get_latest() == "No items scanned. No total."
+
+    def test_one_item_scanned(self, system, display, two_fifty_barcode):
+        system.on_barcode(two_fifty_barcode.to_string())
+        system.on_total()
+
+        assert display.get_latest() == "Total: $2.50"
