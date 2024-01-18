@@ -20,13 +20,13 @@ class BarCodeError(Exception):
         )
 
 
-class PriceNotFoundError(Exception):
+class ItemNotFoundError(Exception):
     def __init__(self, *args, barcode: "BarCode"):
         self.barcode = barcode
-        super(PriceNotFoundError, self).__init__(*args)
+        super(ItemNotFoundError, self).__init__(*args)
 
     def __eq__(self, other):
-        if not isinstance(other, PriceNotFoundError):
+        if not isinstance(other, ItemNotFoundError):
             return False
         return self.barcode == other.barcode
 
@@ -49,6 +49,11 @@ class Price:
 
     def to_display_string(self):
         return f"${self._value:,.2f}"
+
+
+@dataclass
+class SaleItem:
+    price: Price
 
 
 class BarCode:
@@ -85,7 +90,7 @@ class BarCode:
 
 @dataclass
 class ShoppingCart:
-    _cart: List[Price]
+    _cart: List[SaleItem]
 
     def __bool__(self):
         return bool(self._cart)
@@ -93,11 +98,11 @@ class ShoppingCart:
 
 class AbstractDisplay(ABC):
     @abstractmethod
-    def write_price_scanned_message(self, price: Price):
+    def write_item_scanned_message(self, item: SaleItem):
         raise NotImplementedError()
 
     @abstractmethod
-    def write_price_not_found_message(self, error: PriceNotFoundError):
+    def write_item_not_found_message(self, error: ItemNotFoundError):
         raise NotImplementedError()
 
     @abstractmethod
@@ -126,22 +131,22 @@ class Display(AbstractDisplay):
     def write_bad_barcode_message(self, error: BarCodeError):
         self._write("Bad barcode. Rescan")
 
-    def write_price_not_found_message(self, error: PriceNotFoundError):
-        self._write(f"Item not found: {error.barcode}.")
+    def write_item_not_found_message(self, error: ItemNotFoundError):
+        pass
 
-    def write_price_scanned_message(self, price: Price):
-        self._write(price.to_display_string())
+    def write_item_scanned_message(self, item: SaleItem):
+        pass
 
     def write_no_current_sale_message(self):
-        self._write("No items scanned. No total.")
+        pass
 
-    def write_total_sale_price_message(self, price: Price):
-        self._write(f"Total: {price.to_display_string()}")
+    def write_total_sale_price_message(self, cart: ShoppingCart):
+        pass
 
 
 class AbstractPriceLookup(ABC):
     @abstractmethod
-    def get_price(self, barcode: BarCode) -> Price:
+    def get_item(self, barcode: BarCode) -> SaleItem:
         raise NotImplementedError()
 
 
@@ -165,12 +170,12 @@ class PointOfSaleSystem:
     def on_barcode(self, barcode_string: str):
         try:
             barcode = BarCode(barcode_string)
-            price = self.lookup.get_price(barcode)
-            self.display.write_price_scanned_message(price)
+            price = self.lookup.get_item(barcode)
+            self.display.write_item_scanned_message(price)
         except BarCodeError as e:
             self.display.write_bad_barcode_message(e)
-        except PriceNotFoundError as e:
-            self.display.write_price_not_found_message(e)
+        except ItemNotFoundError as e:
+            self.display.write_item_not_found_message(e)
 
     def on_total(self):
         if not self._shopping_cart:

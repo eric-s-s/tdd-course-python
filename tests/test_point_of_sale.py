@@ -1,6 +1,5 @@
 import random
 import string
-from typing import Dict
 from unittest.mock import Mock
 
 import pytest
@@ -12,9 +11,10 @@ from main.point_of_sale import (
     Display,
     PointOfSaleSystem,
     Price,
-    PriceNotFoundError,
+    ItemNotFoundError,
     AbstractDisplay,
     ShoppingCart,
+    SaleItem,
 )
 
 
@@ -118,15 +118,15 @@ def system(mock_lookup, mock_display):
 
 
 class TestPointOfSaleScanSingleItem:
-    def test_on_barcode_writes_price_from_lookup(
+    def test_on_barcode_writes_item_from_lookup(
         self, system, mock_lookup, mock_display
     ):
-        price = Mock()
-        mock_lookup.get_price.return_value = price
+        item = Mock()
+        mock_lookup.get_item.return_value = item
 
         system.on_barcode(get_random_barcode().to_string())
 
-        mock_display.write_price_scanned_message.assert_called_once_with(price)
+        mock_display.write_item_scanned_message.assert_called_once_with(item)
 
     @pytest.mark.parametrize(
         "bad_barcode", ["", "bad code"], ids=["empty", "malformed"]
@@ -143,13 +143,13 @@ class TestPointOfSaleScanSingleItem:
         self, system, mock_display, mock_lookup
     ):
         barcode = get_random_barcode()
-        error = PriceNotFoundError("oops", barcode=barcode)
+        error = ItemNotFoundError("oops", barcode=barcode)
 
-        mock_lookup.get_price.side_effect = error
+        mock_lookup.get_item.side_effect = error
 
         system.on_barcode(get_random_barcode().to_string())
 
-        mock_display.write_price_not_found_message.assert_called_once_with(error)
+        mock_display.write_item_not_found_message.assert_called_once_with(error)
 
     # TODO WRITE TEST FOR 1: UPDATE CART AND 2: PROPERLY SCANS
 
@@ -164,9 +164,9 @@ class TestPointOfSaleOnTotal:
     @pytest.mark.parametrize(
         "cart",
         [
-            ShoppingCart([Price(123)]),
-            ShoppingCart([Price(123), Price(456)]),
-            ShoppingCart([Price(el) for el in range(1, 10)]),
+            ShoppingCart([SaleItem(price=Price(123))]),
+            ShoppingCart([SaleItem(price=Price(123)), SaleItem(price=Price(456))]),
+            ShoppingCart([SaleItem(price=Price(el)) for el in range(1, 10)]),
         ],
     )
     def test_write_current_sale(self, mock_display, cart):
