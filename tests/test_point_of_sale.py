@@ -1,6 +1,7 @@
 import random
 import string
 from typing import Dict
+from unittest.mock import Mock
 
 import pytest
 
@@ -12,6 +13,7 @@ from main.point_of_sale import (
     PointOfSaleSystem,
     Price,
     PriceNotFoundError,
+    AbstractDisplay,
 )
 
 
@@ -109,27 +111,51 @@ class TestBarcode:
 
 
 class TestPointOfSaleScanSingleItem:
+    @pytest.fixture
+    def mock_display(self):
+        return Mock(spec=AbstractDisplay)
+
+    @pytest.fixture
+    def mock_lookup(self):
+        return Mock(spec=AbstractPriceLookup)
+
+    @pytest.fixture
+    def system(self, mock_lookup, mock_display):
+        return PointOfSaleSystem(display=mock_display, lookup=mock_lookup)
+
+    def test_on_barcode_writes_price_from_lookup(
+        self, system, mock_lookup, mock_display
+    ):
+        price = Mock()
+        mock_lookup.get_price.return_value = price
+
+        system.on_barcode(get_random_barcode().to_string())
+
+        mock_display.write_price_scanned_message.assert_called_once_with(price)
+
     @pytest.mark.parametrize(
         "bad_barcode", ["", "bad code"], ids=["empty", "malformed"]
     )
-    def test_empty_barcode(self, display, bad_barcode):
-        system = PointOfSaleSystem(display, FakePriceLookup({}))
+    def test_bad_barcode(self, system, mock_display, bad_barcode):
+        with pytest.raises(BarCodeError) as exc_info:
+            BarCode(bad_barcode)
+        expected = exc_info.value
+
         system.on_barcode(barcode_string=bad_barcode)
 
-        result = display.get_latest()
-        assert result == "Bad barcode. Rescan"
+        mock_display.write_bad_barcode_message.assert_called_once_with(expected)
 
-    def test_no_price_data(self, display):
-        lookup = FakePriceLookup({get_random_barcode(): Price(123)})
-        with pytest.raises(PriceNotFoundError):
-            lookup.get_price(get_random_barcode())
+    def test_no_price_data_displays_missing_price(
+        self, system, mock_display, mock_lookup
+    ):
+        barcode = get_random_barcode()
+        error = PriceNotFoundError("oops", barcode=barcode)
 
-        system = PointOfSaleSystem(display, lookup)
+        mock_lookup.get_price.side_effect = error
 
-        missing_barcode_str = get_random_barcode().to_string()
-        system.on_barcode(missing_barcode_str)
+        system.on_barcode(get_random_barcode().to_string())
 
-        assert display.get_latest() == f"Item not found: {missing_barcode_str}."
+        mock_display.write_price_not_found_message.assert_called_once_with(error)
 
     @pytest.mark.parametrize(
         "price, expected", [(Price(1234.5), "$1,234.50"), (Price(2.34), "$2.34")]
@@ -198,7 +224,7 @@ class TestPointOfSaleOnTotal:
         assert display.get_latest() == "Total: $5.65"
 
     def test_two_items_scanned_and_missing_bar_code(self, display):
-        prices = [Price(12.34), Price(2348.7)]
+        prices = [Price(12.34), Price(2_348.7)]
         barcodes = [get_random_barcode(), get_random_barcode()]
         lookup = FakePriceLookup(dict(zip(barcodes, prices)))
         system = PointOfSaleSystem(display, lookup)
@@ -211,7 +237,7 @@ class TestPointOfSaleOnTotal:
         expected = f"Total: $2,361.04"
         assert display.get_latest() == expected
 
-    def test_two_items_scanned_and_bad(self, display):
+    def test_two_items_scanned_and_bad_barcode(self, display):
         prices = [Price(234.3), Price(1.23)]
         barcodes = [get_random_barcode(), get_random_barcode()]
         lookup = FakePriceLookup(dict(zip(barcodes, prices)))

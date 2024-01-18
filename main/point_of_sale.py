@@ -1,13 +1,38 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
 
 class BarCodeError(Exception):
-    pass
+    def __init__(self, *args, barcode_string):
+        self.barcode_string = barcode_string
+        super(BarCodeError, self).__init__(*args)
+
+    def __eq__(self, other):
+        if not isinstance(other, BarCodeError):
+            return False
+        return self.barcode_string == other.barcode_string
+
+    def __repr__(self):
+        args = ", ".join(self.args)
+        return (
+            f"{self.__class__.__name__}({args}, barcode_string={self.barcode_string})"
+        )
 
 
 class PriceNotFoundError(Exception):
-    pass
+    def __init__(self, *args, barcode: "BarCode"):
+        self.barcode = barcode
+        super(PriceNotFoundError, self).__init__(*args)
+
+    def __eq__(self, other):
+        if not isinstance(other, PriceNotFoundError):
+            return False
+        return self.barcode == other.barcode
+
+    def __repr__(self):
+        args = ", ".join(self.args)
+        return f"{self.__class__.__name__}({args}, barcode={self.barcode})"
 
 
 @dataclass
@@ -26,20 +51,9 @@ class Price:
         return f"${self._value:,.2f}"
 
 
-class Stringifiable:
-    def to_string(self):
-        raise NotImplementedError()
-
-
-class DummyBarcode(Stringifiable):
-    def to_string(self):
-        return "EMPTY"
-
-
-class BarCode(Stringifiable):
+class BarCode:
     def __init__(self, barcode_str: str):
-        to_use = barcode_str.strip()
-        self._value = to_use
+        self._value = barcode_str.strip()
         self._validate()
 
     def to_string(self):
@@ -47,14 +61,15 @@ class BarCode(Stringifiable):
 
     def _validate(self):
         expected_len = 10
-        if not self.to_string():
-            raise BarCodeError("No input.")
-        if len(self.to_string()) != expected_len:
-            msg = f"Bad barcode: {self.to_string()}. Should be ten digits."
-            raise BarCodeError(msg)
-        if not self.to_string().isdigit():
-            msg = f"Bad barcode: {self.to_string()}. Should only contain digits."
-            raise BarCodeError(msg)
+        msg = None
+        if not self._value:
+            msg = "No input."
+        if len(self._value) != expected_len:
+            msg = f"Bad barcode: {self._value}. Should be ten digits."
+        if not self._value.isdigit():
+            msg = f"Bad barcode: {self._value}. Should only contain digits."
+        if msg is not None:
+            raise BarCodeError(msg, barcode_string=self._value)
 
     def __eq__(self, other):
         if isinstance(other, BarCode):
@@ -68,7 +83,21 @@ class BarCode(Stringifiable):
         return f"{self.__class__.__name__}({self.to_string()})"
 
 
-class Display:
+class AbstractDisplay(ABC):
+    @abstractmethod
+    def write_price_scanned_message(self, price: Price):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def write_price_not_found_message(self, error: PriceNotFoundError):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def write_bad_barcode_message(self, error: BarCodeError):
+        raise NotImplementedError()
+
+
+class Display(AbstractDisplay):
     def __init__(self):
         self._latest_message: Optional[str] = None
 
@@ -78,11 +107,11 @@ class Display:
     def _write(self, message: str):
         self._latest_message = message
 
-    def write_bad_barcode_message(self):
+    def write_bad_barcode_message(self, error: BarCodeError):
         self._write("Bad barcode. Rescan")
 
-    def write_price_not_found_message(self, barcode: Stringifiable):
-        self._write(f"Item not found: {barcode.to_string()}.")
+    def write_price_not_found_message(self, error: PriceNotFoundError):
+        self._write(f"Item not found: {error.barcode}.")
 
     def write_price_scanned_message(self, price: Price):
         self._write(price.to_display_string())
@@ -94,7 +123,8 @@ class Display:
         self._write(f"Total: {price.to_display_string()}")
 
 
-class AbstractPriceLookup:
+class AbstractPriceLookup(ABC):
+    @abstractmethod
     def get_price(self, barcode: BarCode) -> Price:
         raise NotImplementedError()
 
@@ -106,16 +136,15 @@ class PointOfSaleSystem:
         self._current_session = []
 
     def on_barcode(self, barcode_string: str):
-        barcode = DummyBarcode()
         try:
             barcode = BarCode(barcode_string)
             price = self.lookup.get_price(barcode)
             self.display.write_price_scanned_message(price)
             self._current_session.append(price)
-        except BarCodeError:
-            self.display.write_bad_barcode_message()
-        except PriceNotFoundError:
-            self.display.write_price_not_found_message(barcode)
+        except BarCodeError as e:
+            self.display.write_bad_barcode_message(e)
+        except PriceNotFoundError as e:
+            self.display.write_price_not_found_message(e)
 
     def on_total(self):
         if not self._current_session:
