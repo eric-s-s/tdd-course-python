@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 
 class BarCodeError(Exception):
@@ -83,6 +83,14 @@ class BarCode:
         return f"{self.__class__.__name__}({self.to_string()})"
 
 
+@dataclass
+class ShoppingCart:
+    _cart: List[Price]
+
+    def __bool__(self):
+        return bool(self._cart)
+
+
 class AbstractDisplay(ABC):
     @abstractmethod
     def write_price_scanned_message(self, price: Price):
@@ -95,6 +103,14 @@ class AbstractDisplay(ABC):
     @abstractmethod
     def write_bad_barcode_message(self, error: BarCodeError):
         raise NotImplementedError()
+
+    @abstractmethod
+    def write_no_current_sale_message(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def write_total_sale_price_message(self, shopping_cart: ShoppingCart):
+        raise NotImplementedError
 
 
 class Display(AbstractDisplay):
@@ -116,10 +132,10 @@ class Display(AbstractDisplay):
     def write_price_scanned_message(self, price: Price):
         self._write(price.to_display_string())
 
-    def write_no_total_message(self):
+    def write_no_current_sale_message(self):
         self._write("No items scanned. No total.")
 
-    def write_total_price_message(self, price: Price):
+    def write_total_sale_price_message(self, price: Price):
         self._write(f"Total: {price.to_display_string()}")
 
 
@@ -130,25 +146,34 @@ class AbstractPriceLookup(ABC):
 
 
 class PointOfSaleSystem:
-    def __init__(self, display: Display, lookup: AbstractPriceLookup):
+    def __init__(
+        self,
+        display: AbstractDisplay,
+        lookup: AbstractPriceLookup,
+        shopping_cart: ShoppingCart,
+    ):
         self.display = display
         self.lookup = lookup
-        self._current_session = []
+        self._shopping_cart = shopping_cart
+
+    @classmethod
+    def with_empty_cart(
+        cls, display: AbstractDisplay, lookup: AbstractPriceLookup
+    ) -> "PointOfSaleSystem":
+        return cls(display=display, lookup=lookup, shopping_cart=ShoppingCart([]))
 
     def on_barcode(self, barcode_string: str):
         try:
             barcode = BarCode(barcode_string)
             price = self.lookup.get_price(barcode)
             self.display.write_price_scanned_message(price)
-            self._current_session.append(price)
         except BarCodeError as e:
             self.display.write_bad_barcode_message(e)
         except PriceNotFoundError as e:
             self.display.write_price_not_found_message(e)
 
     def on_total(self):
-        if not self._current_session:
-            self.display.write_no_total_message()
+        if not self._shopping_cart:
+            self.display.write_no_current_sale_message()
         else:
-            total = sum(self._current_session, start=Price(0))
-            self.display.write_total_price_message(total)
+            self.display.write_total_sale_price_message(self._shopping_cart)

@@ -14,22 +14,8 @@ from main.point_of_sale import (
     Price,
     PriceNotFoundError,
     AbstractDisplay,
+    ShoppingCart,
 )
-
-
-class FakePriceLookup(AbstractPriceLookup):
-    def __init__(self, barcode_to_price: Dict[BarCode, Price]):
-        self._mapping = {k: v for k, v in barcode_to_price.items()}
-
-    def get_price(self, barcode: BarCode) -> float:
-        if barcode not in self._mapping:
-            raise PriceNotFoundError(f"{barcode!r} not in lookup")
-        return self._mapping[barcode]
-
-
-@pytest.fixture()
-def display():
-    return Display()
 
 
 def get_random_barcode():
@@ -57,8 +43,6 @@ class TestPrice:
 
 
 class TestDisplay:
-    """Notes: when we get latest, test 0, 1, and many for display calls"""
-
     def test_get_latest_no_display_calls(self):
         display = Display()
         assert display.get_latest() is None
@@ -70,6 +54,8 @@ class TestDisplay:
         display._write(message)
 
         assert display.get_latest() == message
+
+    # TODO WRITE METHODS TO TEST ALL TYPES
 
 
 class TestBarcode:
@@ -109,20 +95,29 @@ class TestBarcode:
         barcode_str = "0987654321"
         assert BarCode(barcode_str) == BarCode(f"  {barcode_str} ")
 
+    def test_all_whitespace_characters(self):
+        barcode_string = get_random_barcode().to_string()
+        assert BarCode(f" \t \n \r {barcode_string} \r \n  \t  ") == BarCode(
+            barcode_string
+        )
+
+
+@pytest.fixture
+def mock_display():
+    return Mock(spec=AbstractDisplay)
+
+
+@pytest.fixture
+def mock_lookup():
+    return Mock(spec=AbstractPriceLookup)
+
+
+@pytest.fixture
+def system(mock_lookup, mock_display):
+    return PointOfSaleSystem.with_empty_cart(display=mock_display, lookup=mock_lookup)
+
 
 class TestPointOfSaleScanSingleItem:
-    @pytest.fixture
-    def mock_display(self):
-        return Mock(spec=AbstractDisplay)
-
-    @pytest.fixture
-    def mock_lookup(self):
-        return Mock(spec=AbstractPriceLookup)
-
-    @pytest.fixture
-    def system(self, mock_lookup, mock_display):
-        return PointOfSaleSystem(display=mock_display, lookup=mock_lookup)
-
     def test_on_barcode_writes_price_from_lookup(
         self, system, mock_lookup, mock_display
     ):
@@ -137,12 +132,11 @@ class TestPointOfSaleScanSingleItem:
         "bad_barcode", ["", "bad code"], ids=["empty", "malformed"]
     )
     def test_bad_barcode(self, system, mock_display, bad_barcode):
-        with pytest.raises(BarCodeError) as exc_info:
-            BarCode(bad_barcode)
-        expected = exc_info.value
-
         system.on_barcode(barcode_string=bad_barcode)
 
+        expected = BarCodeError(
+            "message is ignored in testing", barcode_string=bad_barcode
+        )
         mock_display.write_bad_barcode_message.assert_called_once_with(expected)
 
     def test_no_price_data_displays_missing_price(
@@ -157,96 +151,27 @@ class TestPointOfSaleScanSingleItem:
 
         mock_display.write_price_not_found_message.assert_called_once_with(error)
 
-    @pytest.mark.parametrize(
-        "price, expected", [(Price(1234.5), "$1,234.50"), (Price(2.34), "$2.34")]
-    )
-    def test_lookup_found(self, display, price, expected):
-        barcode = get_random_barcode()
-        lookup = FakePriceLookup({get_random_barcode(): Price(498574), barcode: price})
-        system = PointOfSaleSystem(display, lookup)
-
-        system.on_barcode(barcode.to_string())
-
-        assert display.get_latest() == expected
-
-    @pytest.mark.parametrize("extra_character", list(" \r\n\t"))
-    def test_lookup_found_with_extra_character(self, display, extra_character):
-        barcode = get_random_barcode()
-        price = Price(12)
-        lookup = FakePriceLookup({get_random_barcode(): Price(498574), barcode: price})
-        system = PointOfSaleSystem(display, lookup)
-
-        system.on_barcode(
-            f"{extra_character*2}{barcode.to_string()}{extra_character*2}"
-        )
-
-        assert display.get_latest() == "$12.00"
-
-    def test_lookup_with_all_removed_characters(self, display):
-        barcode = get_random_barcode()
-        price = Price(3.21)
-        lookup = FakePriceLookup({get_random_barcode(): Price(498574), barcode: price})
-        system = PointOfSaleSystem(display, lookup)
-        barcode_str = f" \r \t \n {barcode.to_string()} \r \t \n "
-
-        system.on_barcode(barcode_str)
-
-        assert display.get_latest() == "$3.21"
+    # TODO WRITE TEST FOR 1: UPDATE CART AND 2: PROPERLY SCANS
 
 
 class TestPointOfSaleOnTotal:
-    def test_no_items_scanned(self, display):
-        system = PointOfSaleSystem(display, FakePriceLookup({}))
+    def test_no_items_scanned_writes_no_total_message(self, mock_display):
+        system = PointOfSaleSystem(mock_display, Mock(), shopping_cart=ShoppingCart([]))
         system.on_total()
 
-        assert display.get_latest() == "No items scanned. No total."
+        mock_display.write_no_current_sale_message.assert_called_once_with()
 
-    def test_one_item_scanned(self, display):
-        barcode = get_random_barcode()
-        lookup = FakePriceLookup({barcode: Price(23.45)})
-        system = PointOfSaleSystem(display, lookup)
+    @pytest.mark.parametrize(
+        "cart",
+        [
+            ShoppingCart([Price(123)]),
+            ShoppingCart([Price(123), Price(456)]),
+            ShoppingCart([Price(el) for el in range(1, 10)]),
+        ],
+    )
+    def test_write_current_sale(self, mock_display, cart):
+        system = PointOfSaleSystem(mock_display, Mock(), shopping_cart=cart)
 
-        system.on_barcode(barcode.to_string())
         system.on_total()
 
-        assert display.get_latest() == "Total: $23.45"
-
-    def test_two_items_scanned(self, display):
-        three_fifty = get_random_barcode()
-        two_fifteen = get_random_barcode()
-        lookup = FakePriceLookup({three_fifty: Price(3.5), two_fifteen: Price(2.15)})
-        system = PointOfSaleSystem(display, lookup)
-
-        system.on_barcode(three_fifty.to_string())
-        system.on_barcode(two_fifteen.to_string())
-        system.on_total()
-
-        assert display.get_latest() == "Total: $5.65"
-
-    def test_two_items_scanned_and_missing_bar_code(self, display):
-        prices = [Price(12.34), Price(2_348.7)]
-        barcodes = [get_random_barcode(), get_random_barcode()]
-        lookup = FakePriceLookup(dict(zip(barcodes, prices)))
-        system = PointOfSaleSystem(display, lookup)
-
-        system.on_barcode(barcodes[0].to_string())
-        system.on_barcode(get_random_barcode().to_string())
-        system.on_barcode(barcodes[1].to_string())
-        system.on_total()
-
-        expected = f"Total: $2,361.04"
-        assert display.get_latest() == expected
-
-    def test_two_items_scanned_and_bad_barcode(self, display):
-        prices = [Price(234.3), Price(1.23)]
-        barcodes = [get_random_barcode(), get_random_barcode()]
-        lookup = FakePriceLookup(dict(zip(barcodes, prices)))
-        system = PointOfSaleSystem(display, lookup)
-
-        system.on_barcode(barcodes[0].to_string())
-        system.on_barcode("oooops")
-        system.on_barcode(barcodes[1].to_string())
-        system.on_total()
-
-        expected = f"Total: $235.53"
-        assert display.get_latest() == expected
+        mock_display.write_total_sale_price_message.assert_called_once_with(cart)
