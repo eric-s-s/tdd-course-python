@@ -1,6 +1,6 @@
 import random
 import string
-from typing import Dict
+from typing import Dict, Optional
 from unittest.mock import Mock
 
 import pytest
@@ -9,7 +9,6 @@ from main.point_of_sale import (
     AbstractItemLookup,
     BarCode,
     BarCodeError,
-    Display,
     PointOfSaleSystem,
     Price,
     ItemNotFoundError,
@@ -43,20 +42,98 @@ class TestPrice:
         assert Price(value).to_display_string() == expected_string
 
 
-class TestDisplay:
-    def test_get_latest_no_display_calls(self):
-        display = Display()
+class TestShoppingCart:
+    def test_empty_cart_get_total(self):
+        assert ShoppingCart([]).get_total() == Price(0)
+
+    def test_one_item_get_total(self):
+        price = Price(1232343)
+        assert ShoppingCart([SaleItem(price=price)]).get_total() == price
+
+    def test_many_items_get_total(self):
+        first_price = Price(1.1)
+        second_price = Price(2.2)
+        third_price = Price(3.3)
+        assert ShoppingCart(
+            [
+                SaleItem(price=first_price),
+                SaleItem(price=second_price),
+                SaleItem(price=third_price),
+            ]
+        ).get_total() == Price(6.6)
+
+
+class DisplayImplementation(AbstractDisplay):
+    def __init__(self):
+        self._latest = None
+
+    def get_latest(self) -> Optional[str]:
+        return self._latest
+
+    def write_item_scanned_message(self, item: SaleItem):
+        self._latest = f"Item Price: {item.price.to_display_string()}"
+
+    def write_item_not_found_message(self, error: ItemNotFoundError):
+        self._latest = f"No item found for: {error.barcode.to_string()}"
+
+    def write_bad_barcode_message(self, error: BarCodeError):
+        self._latest = f"Please rescan. Bad barcode: {error.barcode_string}"
+
+    def write_no_current_sale_message(self):
+        self._latest = "No sale in progress."
+
+    def write_total_sale_price_message(self, shopping_cart: ShoppingCart):
+        self._latest = f"Total: {shopping_cart.get_total().to_display_string()}"
+
+
+class TestDisplayContract:
+    @staticmethod
+    def get_display() -> "AbstractDisplay":
+        return DisplayImplementation()
+
+    @pytest.fixture
+    def display(self) -> "AbstractDisplay":
+        return self.get_display()
+
+    def test_initial_display_has_no_messages(self, display):
         assert display.get_latest() is None
 
-    def test_get_latest_with_one_message(self):
-        message = "some string"
-        display = Display()
+    def test_write_item_scanned(self, display):
+        price = Price(123.34)
 
-        display._write(message)
+        display.write_item_scanned_message(SaleItem(price=price))
 
-        assert display.get_latest() == message
+        assert price.to_display_string() in display.get_latest()
 
-    # TODO WRITE METHODS TO TEST ALL TYPES
+    def test_write_item_not_found(self, display):
+        barcode = get_random_barcode()
+
+        display.write_item_not_found_message(
+            ItemNotFoundError("ooops", barcode=barcode)
+        )
+
+        assert barcode.to_string() in display.get_latest()
+
+    def test_write_bad_barcode(self, display):
+        bad_barcode = "this is not a legal barcode string"
+
+        display.write_bad_barcode_message(
+            BarCodeError("nuts!", barcode_string=bad_barcode)
+        )
+
+        assert bad_barcode in display.get_latest()
+
+    def test_write_no_sale_message(self, display):
+        display.write_no_current_sale_message()
+
+        assert "No sale in progress" in display.get_latest()
+
+    def test_write_total_sale_message(self, display):
+        cart = ShoppingCart([SaleItem(price=Price(1)), SaleItem(price=Price(2))])
+        display.write_total_sale_price_message(cart)
+
+        assert cart.get_total().to_display_string() in display.get_latest()
+        assert "Total" in display.get_latest()
 
 
 class TestBarcode:

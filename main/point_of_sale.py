@@ -98,8 +98,15 @@ class ShoppingCart:
     def update(self, item) -> "ShoppingCart":
         return ShoppingCart(self._cart + [item])
 
+    def get_total(self) -> Price:
+        return sum((el.price for el in self._cart), start=Price(0))
+
 
 class AbstractDisplay(ABC):
+    @abstractmethod
+    def get_latest(self) -> Optional[str]:
+        raise NotImplementedError()
+
     @abstractmethod
     def write_item_scanned_message(self, item: SaleItem):
         raise NotImplementedError()
@@ -119,32 +126,6 @@ class AbstractDisplay(ABC):
     @abstractmethod
     def write_total_sale_price_message(self, shopping_cart: ShoppingCart):
         raise NotImplementedError
-
-
-class Display(AbstractDisplay):
-    def __init__(self):
-        self._latest_message: Optional[str] = None
-
-    def get_latest(self) -> Optional[str]:
-        return self._latest_message
-
-    def _write(self, message: str):
-        self._latest_message = message
-
-    def write_bad_barcode_message(self, error: BarCodeError):
-        self._write("Bad barcode. Rescan")
-
-    def write_item_not_found_message(self, error: ItemNotFoundError):
-        pass
-
-    def write_item_scanned_message(self, item: SaleItem):
-        pass
-
-    def write_no_current_sale_message(self):
-        pass
-
-    def write_total_sale_price_message(self, cart: ShoppingCart):
-        pass
 
 
 class AbstractItemLookup(ABC):
