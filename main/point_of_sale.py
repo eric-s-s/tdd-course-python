@@ -95,6 +95,9 @@ class ShoppingCart:
     def __bool__(self):
         return bool(self._cart)
 
+    def update(self, item) -> 'ShoppingCart':
+        return ShoppingCart(self._cart + [item])
+
 
 class AbstractDisplay(ABC):
     @abstractmethod
@@ -144,9 +147,13 @@ class Display(AbstractDisplay):
         pass
 
 
-class AbstractPriceLookup(ABC):
+class AbstractItemLookup(ABC):
     @abstractmethod
     def get_item(self, barcode: BarCode) -> SaleItem:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def set_item(self, barcode: BarCode, item: SaleItem):
         raise NotImplementedError()
 
 
@@ -154,24 +161,29 @@ class PointOfSaleSystem:
     def __init__(
         self,
         display: AbstractDisplay,
-        lookup: AbstractPriceLookup,
+        lookup: AbstractItemLookup,
         shopping_cart: ShoppingCart,
     ):
         self.display = display
         self.lookup = lookup
         self._shopping_cart = shopping_cart
 
+    @property
+    def shopping_cart(self):
+        return self._shopping_cart
+
     @classmethod
     def with_empty_cart(
-        cls, display: AbstractDisplay, lookup: AbstractPriceLookup
+        cls, display: AbstractDisplay, lookup: AbstractItemLookup
     ) -> "PointOfSaleSystem":
         return cls(display=display, lookup=lookup, shopping_cart=ShoppingCart([]))
 
     def on_barcode(self, barcode_string: str):
         try:
             barcode = BarCode(barcode_string)
-            price = self.lookup.get_item(barcode)
-            self.display.write_item_scanned_message(price)
+            item = self.lookup.get_item(barcode)
+            self._shopping_cart = self.shopping_cart.update(item)
+            self.display.write_item_scanned_message(item)
         except BarCodeError as e:
             self.display.write_bad_barcode_message(e)
         except ItemNotFoundError as e:

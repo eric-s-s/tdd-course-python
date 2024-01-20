@@ -1,11 +1,12 @@
 import random
 import string
+from typing import Dict
 from unittest.mock import Mock
 
 import pytest
 
 from main.point_of_sale import (
-    AbstractPriceLookup,
+    AbstractItemLookup,
     BarCode,
     BarCodeError,
     Display,
@@ -102,6 +103,57 @@ class TestBarcode:
         )
 
 
+class LookupImplementationForTesting(AbstractItemLookup):
+    def __init__(self, lookup: Dict[BarCode, SaleItem]):
+        self._lookup = lookup
+
+    def get_item(self, barcode: BarCode) -> SaleItem:
+        try:
+            return self._lookup[barcode]
+        except KeyError:
+            raise ItemNotFoundError("oops", barcode=barcode)
+
+    def set_item(self, barcode: BarCode, item: SaleItem):
+        self._lookup[barcode] = item
+
+
+class TestItemLookup:
+    @staticmethod
+    def generate_catalog_using(mapping: Dict[BarCode, SaleItem]) -> AbstractItemLookup:
+        return LookupImplementationForTesting(mapping)
+
+    def test_get_item_no_item(self):
+        barcode = get_random_barcode()
+        with pytest.raises(ItemNotFoundError) as exec_info:
+            self.generate_catalog_using({}).get_item(barcode)
+
+        assert exec_info.value.barcode == barcode
+
+    def test_get_item_found_item(self):
+        barcode = get_random_barcode()
+        item = SaleItem(price=Price(123))
+
+        lookup = self.generate_catalog_using(
+            {
+                get_random_barcode(): SaleItem(price=Price(345)),
+                 barcode: item,
+                 get_random_barcode(): SaleItem(price=Price(3454))
+            }
+        )
+
+        assert lookup.get_item(barcode) == item
+
+    def test_set_item(self):
+        barcode = get_random_barcode()
+        item = Mock()
+        lookup = self.generate_catalog_using({})
+
+        lookup.set_item(barcode=barcode, item=item)
+
+        assert lookup.get_item(barcode) == item
+
+
+
 @pytest.fixture
 def mock_display():
     return Mock(spec=AbstractDisplay)
@@ -109,7 +161,7 @@ def mock_display():
 
 @pytest.fixture
 def mock_lookup():
-    return Mock(spec=AbstractPriceLookup)
+    return Mock(spec=AbstractItemLookup)
 
 
 @pytest.fixture
@@ -151,7 +203,22 @@ class TestPointOfSaleScanSingleItem:
 
         mock_display.write_item_not_found_message.assert_called_once_with(error)
 
-    # TODO WRITE TEST FOR 1: UPDATE CART AND 2: PROPERLY SCANS
+    def test_lookup_called_correctly(self, mock_lookup, system):
+        barcode = get_random_barcode()
+
+        system.on_barcode(barcode.to_string())
+
+        mock_lookup.get_item.assert_called_once_with(barcode)
+
+    def test_adds_looked_up_item_to_cart(self, mock_lookup, system):
+        assert system.shopping_cart == ShoppingCart([])
+
+        item = SaleItem(price=Price(3458934534))
+        mock_lookup.get_item.return_value = item
+
+        system.on_barcode(get_random_barcode().to_string())
+
+        assert system.shopping_cart == ShoppingCart([item])
 
 
 class TestPointOfSaleOnTotal:
