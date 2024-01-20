@@ -95,7 +95,7 @@ class ShoppingCart:
     def __bool__(self):
         return bool(self._cart)
 
-    def update(self, item) -> 'ShoppingCart':
+    def update(self, item) -> "ShoppingCart":
         return ShoppingCart(self._cart + [item])
 
 

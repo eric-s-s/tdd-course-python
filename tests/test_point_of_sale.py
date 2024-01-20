@@ -136,8 +136,8 @@ class TestItemLookup:
         lookup = self.generate_catalog_using(
             {
                 get_random_barcode(): SaleItem(price=Price(345)),
-                 barcode: item,
-                 get_random_barcode(): SaleItem(price=Price(3454))
+                barcode: item,
+                get_random_barcode(): SaleItem(price=Price(3454)),
             }
         )
 
@@ -151,7 +151,6 @@ class TestItemLookup:
         lookup.set_item(barcode=barcode, item=item)
 
         assert lookup.get_item(barcode) == item
-
 
 
 @pytest.fixture
