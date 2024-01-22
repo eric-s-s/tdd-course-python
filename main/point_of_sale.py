@@ -148,17 +148,21 @@ class Display:
         self._formatter = formatter
         self._stream = stream
 
+    def _write_line(self, line):
+        stripped_line = line.strip("\n")
+        self._stream.write(f"{stripped_line}\n")
+
     def send_item_scanned(self, item: SaleItem):
-        self._stream.write(self._formatter.item_scanned_message(item))
+        self._write_line(self._formatter.item_scanned_message(item))
 
     def send_item_not_found(self, error: ItemNotFoundError):
-        self._stream.write(self._formatter.item_not_found_message(error))
+        self._write_line(self._formatter.item_not_found_message(error))
 
     def send_bad_barcode(self, error: BarCodeError):
-        self._stream.write(self._formatter.bad_barcode_message(error))
+        self._write_line(self._formatter.bad_barcode_message(error))
 
     def send_total_sale_price(self, shopping_cart: ShoppingCart):
-        self._stream.write(self._formatter.sale_total_message(shopping_cart))
+        self._write_line(self._formatter.sale_total_message(shopping_cart))
 
 
 class AbstractItemLookup(ABC):

@@ -70,6 +70,50 @@ class TestShoppingCart:
         ).get_total() == Price.from_dollars(6.6)
 
 
+class TestBarcode:
+    def test_barcode_correctly_formatted(self):
+        barcode_str = "0983454321"
+        assert BarCode(barcode_str).to_string() == barcode_str
+
+    def test_too_short(self):
+        barcode_string = "123456789"
+        with pytest.raises(BarCodeError):
+            BarCode(barcode_string)
+
+    def test_too_long(self):
+        barcode_str = "12345678901"
+        with pytest.raises(BarCodeError):
+            BarCode(barcode_str)
+
+    def test_empty(self):
+        with pytest.raises(BarCodeError):
+            BarCode("")
+
+    @pytest.mark.parametrize("bad_char", list("a,.#:"))
+    def test_not_all_digits(self, bad_char):
+        barcode_str = f"1234{bad_char}67890"
+        with pytest.raises(BarCodeError):
+            BarCode(barcode_str)
+
+    def test_removes_whitespace_to_string(self):
+        barcode_str = "2398470982"
+        assert (
+            BarCode(barcode_str).to_string()
+            == BarCode(f"  {barcode_str}  ").to_string()
+            == barcode_str
+        )
+
+    def test_removes_whitespace_equality(self):
+        barcode_str = "0987654321"
+        assert BarCode(barcode_str) == BarCode(f"  {barcode_str} ")
+
+    def test_all_whitespace_characters(self):
+        barcode_string = get_random_barcode().to_string()
+        assert BarCode(f" \t \n \r {barcode_string} \r \n  \t  ") == BarCode(
+            barcode_string
+        )
+
+
 class TestDisplayFormatter:
     @pytest.fixture
     def formatter(self):
@@ -143,7 +187,7 @@ class TestDisplay:
         display.send_item_scanned(item)
 
         stream.seek(0)
-        assert stream.read() == str(item)
+        assert stream.read() == f"{item}\n"
 
     def test_send_item_not_found(self, display, stream):
         barcode = get_random_barcode()
@@ -151,7 +195,7 @@ class TestDisplay:
         display.send_item_not_found(ItemNotFoundError("ooops", barcode=barcode))
 
         stream.seek(0)
-        assert stream.read() == str(barcode)
+        assert stream.read() == f"{barcode}\n"
 
     def test_send_bad_barcode(self, display, stream):
         bad_barcode = "this is not a legal barcode string"
@@ -159,7 +203,7 @@ class TestDisplay:
         display.send_bad_barcode(BarCodeError("nuts!", barcode_string=bad_barcode))
 
         stream.seek(0)
-        assert stream.read() == bad_barcode
+        assert stream.read() == f"{bad_barcode}\n"
 
     def test_send_total_sale_message(self, display, stream):
         cart = ShoppingCart(
@@ -168,51 +212,7 @@ class TestDisplay:
         display.send_total_sale_price(cart)
 
         stream.seek(0)
-        assert stream.read() == str(cart)
-
-
-class TestBarcode:
-    def test_barcode_correctly_formatted(self):
-        barcode_str = "0983454321"
-        assert BarCode(barcode_str).to_string() == barcode_str
-
-    def test_too_short(self):
-        barcode_string = "123456789"
-        with pytest.raises(BarCodeError):
-            BarCode(barcode_string)
-
-    def test_too_long(self):
-        barcode_str = "12345678901"
-        with pytest.raises(BarCodeError):
-            BarCode(barcode_str)
-
-    def test_empty(self):
-        with pytest.raises(BarCodeError):
-            BarCode("")
-
-    @pytest.mark.parametrize("bad_char", list("a,.#:"))
-    def test_not_all_digits(self, bad_char):
-        barcode_str = f"1234{bad_char}67890"
-        with pytest.raises(BarCodeError):
-            BarCode(barcode_str)
-
-    def test_removes_whitespace_to_string(self):
-        barcode_str = "2398470982"
-        assert (
-            BarCode(barcode_str).to_string()
-            == BarCode(f"  {barcode_str}  ").to_string()
-            == barcode_str
-        )
-
-    def test_removes_whitespace_equality(self):
-        barcode_str = "0987654321"
-        assert BarCode(barcode_str) == BarCode(f"  {barcode_str} ")
-
-    def test_all_whitespace_characters(self):
-        barcode_string = get_random_barcode().to_string()
-        assert BarCode(f" \t \n \r {barcode_string} \r \n  \t  ") == BarCode(
-            barcode_string
-        )
+        assert stream.read() == f"{cart}\n"
 
 
 class LookupImplementationForTesting(AbstractItemLookup):
