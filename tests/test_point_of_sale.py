@@ -149,9 +149,9 @@ class TestDisplayFormatter:
         )
 
     def test_total_sale(self, formatter):
-        cart = ShoppingCart([SaleItem(price=Price.from_cents(1232))])
+        cart = ShoppingCart([SaleItem(price=Price.from_cents(12_32))])
 
-        expected = f"Total sale: {cart.get_total()}"
+        expected = f"Total sale: $12.32"
         assert formatter.sale_total_message(cart) == expected
 
 

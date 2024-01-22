@@ -140,7 +140,7 @@ class StandardDisplayFormatter(AbstractDisplayFormatter):
         return f"Bad barcode: {barcode_error.barcode_string!r}. Please rescan."
 
     def sale_total_message(self, cart: ShoppingCart) -> str:
-        return f"Total sale: {cart.get_total()}"
+        return f"Total sale: {cart.get_total().to_display_string()}"
 
 
 class Display:
