@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, TextIO
 
 
 class BarCodeError(Exception):
@@ -102,30 +102,54 @@ class ShoppingCart:
         return sum((el.price for el in self._cart), start=Price(0))
 
 
-class AbstractDisplay(ABC):
+class AbstractDisplayFormatter(ABC):
     @abstractmethod
-    def get_latest(self) -> Optional[str]:
+    def item_scanned_message(self, item: SaleItem) -> str:
         raise NotImplementedError()
 
     @abstractmethod
-    def write_item_scanned_message(self, item: SaleItem):
+    def item_not_found_message(self, not_found_error: ItemNotFoundError) -> str:
         raise NotImplementedError()
 
     @abstractmethod
-    def write_item_not_found_message(self, error: ItemNotFoundError):
+    def bad_barcode_message(self, barcode_error: BarCodeError) -> str:
         raise NotImplementedError()
 
     @abstractmethod
-    def write_bad_barcode_message(self, error: BarCodeError):
+    def sale_total_message(self, cart: ShoppingCart) -> str:
         raise NotImplementedError()
 
-    @abstractmethod
-    def write_no_current_sale_message(self):
-        raise NotImplementedError()
 
-    @abstractmethod
-    def write_total_sale_price_message(self, shopping_cart: ShoppingCart):
-        raise NotImplementedError
+class StandardDisplayFormatter(AbstractDisplayFormatter):
+    def item_scanned_message(self, item: SaleItem) -> str:
+        return f"Item price: {item.price.to_display_string()}"
+
+    def item_not_found_message(self, not_found_error: ItemNotFoundError) -> str:
+        return f"No item found for barcode: {not_found_error.barcode.to_string()}"
+
+    def bad_barcode_message(self, barcode_error: BarCodeError) -> str:
+        return f"Bad barcode: {barcode_error.barcode_string!r}. Please rescan."
+
+    def sale_total_message(self, cart: ShoppingCart) -> str:
+        return f"Total sale: {cart.get_total()}"
+
+
+class Display:
+    def __init__(self, formatter: AbstractDisplayFormatter, stream: TextIO):
+        self._formatter = formatter
+        self._stream = stream
+
+    def send_item_scanned(self, item: SaleItem):
+        self._stream.write(self._formatter.item_scanned_message(item))
+
+    def send_item_not_found(self, error: ItemNotFoundError):
+        self._stream.write(self._formatter.item_not_found_message(error))
+
+    def send_bad_barcode(self, error: BarCodeError):
+        self._stream.write(self._formatter.bad_barcode_message(error))
+
+    def send_total_sale_price(self, shopping_cart: ShoppingCart):
+        self._stream.write(self._formatter.sale_total_message(shopping_cart))
 
 
 class AbstractItemLookup(ABC):
@@ -141,7 +165,7 @@ class AbstractItemLookup(ABC):
 class PointOfSaleSystem:
     def __init__(
         self,
-        display: AbstractDisplay,
+        display: Display,
         lookup: AbstractItemLookup,
         shopping_cart: ShoppingCart,
     ):
@@ -155,7 +179,7 @@ class PointOfSaleSystem:
 
     @classmethod
     def with_empty_cart(
-        cls, display: AbstractDisplay, lookup: AbstractItemLookup
+        cls, display: Display, lookup: AbstractItemLookup
     ) -> "PointOfSaleSystem":
         return cls(display=display, lookup=lookup, shopping_cart=ShoppingCart([]))
 
@@ -164,14 +188,11 @@ class PointOfSaleSystem:
             barcode = BarCode(barcode_string)
             item = self.lookup.get_item(barcode)
             self._shopping_cart = self.shopping_cart.update(item)
-            self.display.write_item_scanned_message(item)
+            self.display.send_item_scanned(item)
         except BarCodeError as e:
-            self.display.write_bad_barcode_message(e)
+            self.display.send_bad_barcode(e)
         except ItemNotFoundError as e:
-            self.display.write_item_not_found_message(e)
+            self.display.send_item_not_found(e)
 
     def on_total(self):
-        if not self._shopping_cart:
-            self.display.write_no_current_sale_message()
-        else:
-            self.display.write_total_sale_price_message(self._shopping_cart)
+        self.display.send_total_sale_price(self._shopping_cart)
