@@ -44,6 +44,10 @@ class TestPrice:
     def test_to_string(self, value, expected_string):
         assert Price.from_dollars(value).to_display_string() == expected_string
 
+    def test_to_string_with_cents(self):
+        cents = 1_234_50
+        assert Price.from_cents(cents).to_display_string() == "$1,234.50"
+
 
 class TestShoppingCart:
     def test_empty_cart_get_total(self):
