@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, TextIO
+from typing import List, TextIO, Dict
 
 
 class BarCodeError(Exception):
@@ -173,6 +173,19 @@ class AbstractItemLookup(ABC):
     @abstractmethod
     def set_item(self, barcode: BarCode, item: SaleItem):
         raise NotImplementedError()
+
+
+class InMemoryLookup(AbstractItemLookup):
+    def __init__(self, lookup: Dict[BarCode, SaleItem]):
+        self._lookup = lookup
+
+    def get_item(self, barcode: BarCode) -> SaleItem:
+        if barcode not in self._lookup:
+            raise ItemNotFoundError("oops", barcode=barcode)
+        return self._lookup[barcode]
+
+    def set_item(self, barcode: BarCode, item: SaleItem):
+        self._lookup[barcode] = item
 
 
 class PointOfSaleSystem:

@@ -12,12 +12,13 @@ from main.point_of_sale import (
     BarCodeError,
     PointOfSaleSystem,
     Price,
-    ItemNotFoundError,
     ShoppingCart,
     SaleItem,
     StandardDisplayFormatter,
     Display,
     AbstractDisplayFormatter,
+    ItemNotFoundError,
+    InMemoryLookup,
 )
 
 
@@ -215,29 +216,16 @@ class TestDisplay:
         assert stream.read() == f"{cart}\n"
 
 
-class LookupImplementationForTesting(AbstractItemLookup):
-    def __init__(self, lookup: Dict[BarCode, SaleItem]):
-        self._lookup = lookup
-
-    def get_item(self, barcode: BarCode) -> SaleItem:
-        try:
-            return self._lookup[barcode]
-        except KeyError:
-            raise ItemNotFoundError("oops", barcode=barcode)
-
-    def set_item(self, barcode: BarCode, item: SaleItem):
-        self._lookup[barcode] = item
-
-
 class TestItemLookup:
     @staticmethod
     def generate_catalog_using(mapping: Dict[BarCode, SaleItem]) -> AbstractItemLookup:
-        return LookupImplementationForTesting(mapping)
+        return InMemoryLookup(mapping)
 
     def test_get_item_no_item(self):
         barcode = get_random_barcode()
+        lookup = self.generate_catalog_using({})
         with pytest.raises(ItemNotFoundError) as exec_info:
-            self.generate_catalog_using({}).get_item(barcode)
+            lookup.get_item(barcode)
 
         assert exec_info.value.barcode == barcode
 

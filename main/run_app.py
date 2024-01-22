@@ -1,30 +1,14 @@
 import sys
-from typing import Dict
 
 from point_of_sale import (
     PointOfSaleSystem,
     Display,
     StandardDisplayFormatter,
-    AbstractItemLookup,
     BarCode,
     SaleItem,
-    ItemNotFoundError,
     Price,
+    InMemoryLookup,
 )
-
-
-class InMemoryLookup(AbstractItemLookup):
-    def __init__(self, mapping: Dict[BarCode, SaleItem]):
-        self._mapping = mapping.copy()
-
-    def get_item(self, barcode: BarCode) -> SaleItem:
-        try:
-            return self._mapping[barcode]
-        except KeyError:
-            raise ItemNotFoundError("Missing Item", barcode=barcode)
-
-    def set_item(self, barcode: BarCode, item: SaleItem):
-        self._mapping[barcode] = item
 
 
 display = Display(formatter=StandardDisplayFormatter(), stream=sys.stdout)
