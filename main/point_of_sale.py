@@ -37,18 +37,27 @@ class ItemNotFoundError(Exception):
 
 @dataclass
 class Price:
-    _value: float
+    _cents: int
+
+    @classmethod
+    def from_cents(cls, cents: int) -> "Price":
+        return cls(_cents=cents)
+
+    @classmethod
+    def from_dollars(cls, dollars: float) -> "Price":
+        return cls(_cents=int(dollars * 100))
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self._value})"
+        return f"{self.__class__.__name__}.from_cents({self._cents})"
 
     def __add__(self, other) -> "Price":
         if not isinstance(other, Price):
             raise TypeError(f"Tried to add {self.__class__} to {other.__class__}")
-        return Price(self._value + other._value)
+        return Price(_cents=self._cents + other._cents)
 
     def to_display_string(self):
-        return f"${self._value:,.2f}"
+        dollars, cents = divmod(self._cents, 100)
+        return f"${dollars:,}.{cents:0>2}"
 
 
 @dataclass

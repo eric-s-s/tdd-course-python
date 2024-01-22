@@ -42,28 +42,28 @@ class TestPrice:
         ],
     )
     def test_to_string(self, value, expected_string):
-        assert Price(value).to_display_string() == expected_string
+        assert Price.from_dollars(value).to_display_string() == expected_string
 
 
 class TestShoppingCart:
     def test_empty_cart_get_total(self):
-        assert ShoppingCart([]).get_total() == Price(0)
+        assert ShoppingCart([]).get_total() == Price.from_dollars(0)
 
     def test_one_item_get_total(self):
-        price = Price(1232343)
+        price = Price.from_dollars(1232343)
         assert ShoppingCart([SaleItem(price=price)]).get_total() == price
 
     def test_many_items_get_total(self):
-        first_price = Price(1.1)
-        second_price = Price(2.2)
-        third_price = Price(3.3)
+        first_price = Price.from_dollars(1.1)
+        second_price = Price.from_dollars(2.2)
+        third_price = Price.from_dollars(3.3)
         assert ShoppingCart(
             [
                 SaleItem(price=first_price),
                 SaleItem(price=second_price),
                 SaleItem(price=third_price),
             ]
-        ).get_total() == Price(6.6)
+        ).get_total() == Price.from_dollars(6.6)
 
 
 class TestDisplayFormatter:
@@ -72,7 +72,7 @@ class TestDisplayFormatter:
         return StandardDisplayFormatter()
 
     def test_item_scanned(self, formatter):
-        price = Price(123)
+        price = Price.from_cents(123)
         item = SaleItem(price=price)
 
         assert (
@@ -101,7 +101,7 @@ class TestDisplayFormatter:
         )
 
     def test_total_sale(self, formatter):
-        cart = ShoppingCart([SaleItem(price=Price(1232))])
+        cart = ShoppingCart([SaleItem(price=Price.from_cents(1232))])
 
         expected = f"Total sale: {cart.get_total()}"
         assert formatter.sale_total_message(cart) == expected
@@ -135,7 +135,7 @@ class TestDisplay:
         assert stream.read() == ""
 
     def test_send_item_scanned(self, display, stream):
-        item = SaleItem(price=(Price(123.34)))
+        item = SaleItem(price=(Price.from_dollars(123.34)))
         display.send_item_scanned(item)
 
         stream.seek(0)
@@ -158,7 +158,9 @@ class TestDisplay:
         assert stream.read() == bad_barcode
 
     def test_send_total_sale_message(self, display, stream):
-        cart = ShoppingCart([SaleItem(price=Price(1)), SaleItem(price=Price(2))])
+        cart = ShoppingCart(
+            [SaleItem(price=Price.from_cents(1)), SaleItem(price=Price.from_cents(2))]
+        )
         display.send_total_sale_price(cart)
 
         stream.seek(0)
@@ -237,13 +239,13 @@ class TestItemLookup:
 
     def test_get_item_found_item(self):
         barcode = get_random_barcode()
-        item = SaleItem(price=Price(123))
+        item = SaleItem(price=Price.from_cents(123))
 
         lookup = self.generate_catalog_using(
             {
-                get_random_barcode(): SaleItem(price=Price(345)),
+                get_random_barcode(): SaleItem(price=Price.from_cents(345)),
                 barcode: item,
-                get_random_barcode(): SaleItem(price=Price(3454)),
+                get_random_barcode(): SaleItem(price=Price.from_cents(3454)),
             }
         )
 
@@ -318,7 +320,7 @@ class TestPointOfSaleScanSingleItem:
     def test_adds_looked_up_item_to_cart(self, mock_lookup, system):
         assert system.shopping_cart == ShoppingCart([])
 
-        item = SaleItem(price=Price(3458934534))
+        item = SaleItem(price=Price.from_cents(3458934534))
         mock_lookup.get_item.return_value = item
 
         system.on_barcode(get_random_barcode().to_string())
@@ -330,9 +332,14 @@ class TestPointOfSaleOnTotal:
     @pytest.mark.parametrize(
         "cart",
         [
-            ShoppingCart([SaleItem(price=Price(123))]),
-            ShoppingCart([SaleItem(price=Price(123)), SaleItem(price=Price(456))]),
-            ShoppingCart([SaleItem(price=Price(el)) for el in range(1, 10)]),
+            ShoppingCart([SaleItem(price=Price.from_cents(123))]),
+            ShoppingCart(
+                [
+                    SaleItem(price=Price.from_cents(123)),
+                    SaleItem(price=Price.from_cents(456)),
+                ]
+            ),
+            ShoppingCart([SaleItem(price=Price.from_cents(el)) for el in range(1, 10)]),
         ],
     )
     def test_write_current_sale(self, mock_display, cart):
