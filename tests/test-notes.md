@@ -54,3 +54,12 @@ displays:
 4. multiple different request
 
 retries on display?  maaaaaybe
+
+
+## Scan multiple barcodes
+
+3 things.
+- displays total price as scan
+- what if missing?
+- need a total button
+- total on products found?
