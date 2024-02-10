@@ -25,6 +25,7 @@ lookup = InMemoryLookup(
 )
 system = PointOfSaleSystem.with_empty_cart(display=display, lookup=lookup)
 
+
 class MyListener:
     def __init__(self, input_stream: TextIO, pos_system: PointOfSaleSystem):
         self._intput_stream = input_stream
@@ -50,7 +51,6 @@ if __name__ == "__main__":
     listener = MyListener(sys.stdin, system)
     while True:
         listener.run()
-
 
     # system.on_barcode("1234567890")
     # system.on_barcode("1234567899")
