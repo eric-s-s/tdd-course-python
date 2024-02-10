@@ -1,7 +1,8 @@
 import random
 import string
-from typing import Dict
-from unittest.mock import Mock
+from threading import Thread, Event
+from typing import Dict, TextIO
+from unittest.mock import Mock, call
 from io import StringIO
 
 import pytest
@@ -175,36 +176,37 @@ class TestDisplay:
     def stream(self):
         return StringIO()
 
+    @staticmethod
+    def assert_stream(test_stream: StringIO, expected: str):
+        test_stream.seek(0)
+        assert test_stream.read() == expected
+
     @pytest.fixture
     def display(self, stream) -> Display:
         return Display(formatter=MockDisplayFormatter(), stream=stream)
 
     def test_initial_display_has_no_messages(self, display, stream):
-        stream.seek(0)
-        assert stream.read() == ""
+        self.assert_stream(stream, "")
 
     def test_send_item_scanned(self, display, stream):
         item = SaleItem(price=(Price.from_dollars(123.34)))
         display.send_item_scanned(item)
 
-        stream.seek(0)
-        assert stream.read() == f"{item}\n"
+        self.assert_stream(stream, f"{item}\n")
 
     def test_send_item_not_found(self, display, stream):
         barcode = get_random_barcode()
 
         display.send_item_not_found(ItemNotFoundError("ooops", barcode=barcode))
 
-        stream.seek(0)
-        assert stream.read() == f"{barcode}\n"
+        self.assert_stream(stream, f"{barcode}\n")
 
     def test_send_bad_barcode(self, display, stream):
         bad_barcode = "this is not a legal barcode string"
 
         display.send_bad_barcode(BarCodeError("nuts!", barcode_string=bad_barcode))
 
-        stream.seek(0)
-        assert stream.read() == f"{bad_barcode}\n"
+        self.assert_stream(stream, f"{bad_barcode}\n")
 
     def test_send_total_sale_message(self, display, stream):
         cart = ShoppingCart(
@@ -212,8 +214,16 @@ class TestDisplay:
         )
         display.send_total_sale_price(cart)
 
-        stream.seek(0)
-        assert stream.read() == f"{cart}\n"
+        self.assert_stream(stream, f"{cart}\n")
+
+    def test_multiple_messages(self, display, stream):
+        item = SaleItem(price=(Price.from_dollars(123)))
+        bad_barcode = "durrrrr"
+
+        display.send_item_scanned(item)
+        display.send_bad_barcode(BarCodeError("nuts!", barcode_string=bad_barcode))
+
+        self.assert_stream(stream, f"{item}\n{bad_barcode}\n")
 
 
 class TestItemLookup:
