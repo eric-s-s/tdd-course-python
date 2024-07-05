@@ -1,25 +1,27 @@
 import random
 import string
-from threading import Thread, Event
-from typing import Dict, TextIO
-from unittest.mock import Mock, call
 from io import StringIO
+from queue import Queue
+from typing import Dict
+from unittest.mock import Mock
 
 import pytest
 
 from main.point_of_sale import (
+    AbstractDisplayFormatter,
     AbstractItemLookup,
     BarCode,
     BarCodeError,
+    Display,
+    InMemoryLookup,
+    ItemNotFoundError,
     PointOfSaleSystem,
     Price,
-    ShoppingCart,
     SaleItem,
+    ScannerListener,
+    Seconds,
+    ShoppingCart,
     StandardDisplayFormatter,
-    Display,
-    AbstractDisplayFormatter,
-    ItemNotFoundError,
-    InMemoryLookup,
 )
 
 
@@ -285,20 +287,9 @@ class TestPointOfSaleScanSingleItem:
         item = Mock()
         mock_lookup.get_item.return_value = item
 
-        system.on_barcode(get_random_barcode().to_string())
+        system.on_barcode(get_random_barcode())
 
         mock_display.send_item_scanned.assert_called_once_with(item)
-
-    @pytest.mark.parametrize(
-        "bad_barcode", ["", "bad code"], ids=["empty", "malformed"]
-    )
-    def test_bad_barcode(self, system, mock_display, bad_barcode):
-        system.on_barcode(barcode_string=bad_barcode)
-
-        expected = BarCodeError(
-            "message is ignored in testing", barcode_string=bad_barcode
-        )
-        mock_display.send_bad_barcode.assert_called_once_with(expected)
 
     def test_no_price_data_displays_missing_price(
         self, system, mock_display, mock_lookup
@@ -308,14 +299,14 @@ class TestPointOfSaleScanSingleItem:
 
         mock_lookup.get_item.side_effect = error
 
-        system.on_barcode(get_random_barcode().to_string())
+        system.on_barcode(get_random_barcode())
 
         mock_display.send_item_not_found.assert_called_once_with(error)
 
     def test_lookup_called_correctly(self, mock_lookup, system):
         barcode = get_random_barcode()
 
-        system.on_barcode(barcode.to_string())
+        system.on_barcode(barcode)
 
         mock_lookup.get_item.assert_called_once_with(barcode)
 
@@ -325,7 +316,7 @@ class TestPointOfSaleScanSingleItem:
         item = SaleItem(price=Price.from_cents(3458934534))
         mock_lookup.get_item.return_value = item
 
-        system.on_barcode(get_random_barcode().to_string())
+        system.on_barcode(get_random_barcode())
 
         assert system.shopping_cart == ShoppingCart([item])
 
@@ -350,3 +341,44 @@ class TestPointOfSaleOnTotal:
         system.on_total()
 
         mock_display.send_total_sale_price.assert_called_once_with(cart)
+
+
+class TestScannerListener:
+    @pytest.fixture
+    def input_stream(self):
+        return StringIO()
+
+    @pytest.fixture
+    def queue(self):
+        return Queue()
+
+    @pytest.fixture
+    def listener(self, input_stream, queue, mock_display):
+        return ScannerListener(input_stream, queue, mock_display, read_wait=Seconds(0))
+
+    def test_calls_one_barcode_line(self, listener, input_stream, queue):
+        barcode = get_random_barcode()
+        input_stream.write(f"{barcode.to_string()}\n")
+        input_stream.flush()
+        input_stream.seek(0)
+
+        assert queue.empty()
+
+        with listener.start():
+            pass
+        assert queue.get_nowait() == barcode
+        assert queue.empty()
+
+    def test_bad_barcode(self, listener, mock_display, input_stream, queue):
+        bad_barcode = "bad barcode"
+        input_stream.write(f"{bad_barcode}\n")
+        input_stream.seek(0)
+
+        with listener.start():
+            pass
+
+        expected = BarCodeError(
+            "message is ignored in testing", barcode_string=bad_barcode
+        )
+        mock_display.send_bad_barcode.assert_called_once_with(expected)
+        assert queue.empty()

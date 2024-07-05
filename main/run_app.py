@@ -1,18 +1,17 @@
 import sys
 from io import StringIO
-from threading import Thread, Event
+from threading import Event, Thread
 from typing import TextIO
 
 from point_of_sale import (
-    PointOfSaleSystem,
-    Display,
-    StandardDisplayFormatter,
     BarCode,
-    SaleItem,
-    Price,
+    Display,
     InMemoryLookup,
+    PointOfSaleSystem,
+    Price,
+    SaleItem,
+    StandardDisplayFormatter,
 )
-
 
 display = Display(formatter=StandardDisplayFormatter(), stream=sys.stdout)
 lookup = InMemoryLookup(
