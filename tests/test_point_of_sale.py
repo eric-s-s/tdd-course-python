@@ -1,7 +1,6 @@
 import random
 import string
 from io import StringIO
-from queue import Queue
 from typing import Dict
 from unittest.mock import Mock
 
@@ -343,33 +342,44 @@ class TestPointOfSaleOnTotal:
         mock_display.send_total_sale_price.assert_called_once_with(cart)
 
 
+
+class TestPointOfSaleOnBadBarcode:
+    def test_on_bad_barcode(self, mock_display):
+        error = BarCodeError("message", barcode_string="abcoooops")
+        system = PointOfSaleSystem(mock_display, Mock(), Mock())
+
+        system.on_bad_barcode(error)
+
+        mock_display.send_bad_barcode.assert_called_once_with(error)
+
+
+
+
 class TestScannerListener:
     @pytest.fixture
     def input_stream(self):
         return StringIO()
 
     @pytest.fixture
-    def queue(self):
-        return Queue()
+    def system(self):
+        return Mock(spec=PointOfSaleSystem)
 
     @pytest.fixture
-    def listener(self, input_stream, queue, mock_display):
-        return ScannerListener(input_stream, queue, mock_display, read_wait=Seconds(0))
+    def listener(self, input_stream,  system):
+        return ScannerListener(input_stream, system, read_wait=Seconds(0))
 
-    def test_calls_one_barcode_line(self, listener, input_stream, queue):
+    def test_calls_one_barcode_line(self, listener, input_stream, system):
         barcode = get_random_barcode()
         input_stream.write(f"{barcode.to_string()}\n")
         input_stream.flush()
         input_stream.seek(0)
 
-        assert queue.empty()
-
         with listener.start():
             pass
-        assert queue.get_nowait() == barcode
-        assert queue.empty()
 
-    def test_bad_barcode(self, listener, mock_display, input_stream, queue):
+        system.on_barcode.assert_called_once_with(barcode)
+
+    def test_bad_barcode(self, listener, input_stream, system):
         bad_barcode = "bad barcode"
         input_stream.write(f"{bad_barcode}\n")
         input_stream.seek(0)
@@ -380,5 +390,4 @@ class TestScannerListener:
         expected = BarCodeError(
             "message is ignored in testing", barcode_string=bad_barcode
         )
-        mock_display.send_bad_barcode.assert_called_once_with(expected)
-        assert queue.empty()
+        system.on_bad_barcode.assert_called_once_with(expected)

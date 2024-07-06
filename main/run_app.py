@@ -1,7 +1,5 @@
 import sys
-from io import StringIO
-from threading import Event, Thread
-from typing import TextIO
+from queue import Queue, Empty
 
 from point_of_sale import (
     BarCode,
@@ -10,7 +8,7 @@ from point_of_sale import (
     PointOfSaleSystem,
     Price,
     SaleItem,
-    StandardDisplayFormatter,
+    StandardDisplayFormatter, ScannerListener, Seconds,
 )
 
 display = Display(formatter=StandardDisplayFormatter(), stream=sys.stdout)
@@ -24,32 +22,23 @@ lookup = InMemoryLookup(
 )
 system = PointOfSaleSystem.with_empty_cart(display=display, lookup=lookup)
 
+queue = Queue()
 
-class MyListener:
-    def __init__(self, input_stream: TextIO, pos_system: PointOfSaleSystem):
-        self._intput_stream = input_stream
-        self._system = pos_system
-
-    def run(self):
-        data = self._intput_stream.readline()
-        print(f"READ: {data}\n")
-        if not data:
-            return
-
-        if "total" in data:
-            print("asked for total")
-            self._system.on_total()
-        else:
-            print("DATA")
-            self._system.on_barcode(data)
+listener = ScannerListener(sys.stdin, system, Seconds(0.1))
 
 
 if __name__ == "__main__":
     print("hello")
     system.on_total()
-    listener = MyListener(sys.stdin, system)
-    while True:
-        listener.run()
+
+    with listener.start():
+        while True:
+            input("gimme barcode >>> ")
+            try:
+                system.on_barcode(queue.get(timeout=0.5))
+            except Empty:
+                pass
+            system.on_total()
 
     # system.on_barcode("1234567890")
     # system.on_barcode("1234567899")

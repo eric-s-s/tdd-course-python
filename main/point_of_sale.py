@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
-from queue import Queue
 from threading import Event, Thread
 from time import sleep
 from typing import Dict, List, TextIO
@@ -225,6 +224,12 @@ class PointOfSaleSystem:
     def on_total(self):
         self.display.send_total_sale_price(self._shopping_cart)
 
+    def on_bad_barcode(self, error: BarCodeError):
+        self.display.send_bad_barcode(error)
+
+
+
+
 
 @dataclass(frozen=True)
 class Seconds:
@@ -239,18 +244,17 @@ class Seconds:
 
 class ScannerListener:
     def __init__(
-        self, input_stream: TextIO, queue: Queue, display: Display, read_wait: Seconds
+        self, input_stream: TextIO, system: PointOfSaleSystem, read_wait: Seconds
     ):
         self._input_stream = input_stream
-        self._queue = queue
-        self._display = display
+        self._system = system
         self._read_wait = read_wait
         self._stop_event = Event()
         self._thread = Thread(target=self._do_action)
 
     def _do_action(self):
         while not self._stop_event.is_set():
-            new_line = self._input_stream.readline()
+            new_line = self._input_stream.readline().strip("\n")
             if not new_line:
                 sleep(self._read_wait.to_float())
                 continue
@@ -258,10 +262,10 @@ class ScannerListener:
             try:
                 barcode = BarCode(new_line)
             except BarCodeError as e:
-                self._display.send_bad_barcode(e)
+                self._system.on_bad_barcode(e)
                 continue
 
-            self._queue.put(barcode)
+            self._system.on_barcode(barcode)
 
     @contextmanager
     def start(self):
