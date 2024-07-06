@@ -1,5 +1,5 @@
 import sys
-from queue import Queue, Empty
+from queue import Empty, Queue
 
 from point_of_sale import (
     BarCode,
@@ -8,7 +8,9 @@ from point_of_sale import (
     PointOfSaleSystem,
     Price,
     SaleItem,
-    StandardDisplayFormatter, ScannerListener, Seconds,
+    ScannerListener,
+    Seconds,
+    StandardDisplayFormatter,
 )
 
 display = Display(formatter=StandardDisplayFormatter(), stream=sys.stdout)

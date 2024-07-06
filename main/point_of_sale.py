@@ -228,9 +228,6 @@ class PointOfSaleSystem:
         self.display.send_bad_barcode(error)
 
 
-
-
-
 @dataclass(frozen=True)
 class Seconds:
     _value: float

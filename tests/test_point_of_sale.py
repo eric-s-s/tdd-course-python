@@ -342,7 +342,6 @@ class TestPointOfSaleOnTotal:
         mock_display.send_total_sale_price.assert_called_once_with(cart)
 
 
-
 class TestPointOfSaleOnBadBarcode:
     def test_on_bad_barcode(self, mock_display):
         error = BarCodeError("message", barcode_string="abcoooops")
@@ -351,8 +350,6 @@ class TestPointOfSaleOnBadBarcode:
         system.on_bad_barcode(error)
 
         mock_display.send_bad_barcode.assert_called_once_with(error)
-
-
 
 
 class TestScannerListener:
@@ -365,7 +362,7 @@ class TestScannerListener:
         return Mock(spec=PointOfSaleSystem)
 
     @pytest.fixture
-    def listener(self, input_stream,  system):
+    def listener(self, input_stream, system):
         return ScannerListener(input_stream, system, read_wait=Seconds(0))
 
     def test_calls_one_barcode_line(self, listener, input_stream, system):
